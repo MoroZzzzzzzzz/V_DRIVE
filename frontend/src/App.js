@@ -23,6 +23,7 @@ import Footer from './components/Footer';
 // Context
 import { AuthProvider } from './contexts/AuthContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
+import { NotificationProvider } from './components/NotificationSystem';
 
 function App() {
   return (
