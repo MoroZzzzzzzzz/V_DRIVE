@@ -108,6 +108,7 @@ const ERPDashboard = () => {
     { id: 'cars', label: 'Склад автомобилей', icon: 'fas fa-car' },
     { id: 'sales', label: 'Продажи', icon: 'fas fa-chart-line' },
     { id: 'projects', label: 'Проекты', icon: 'fas fa-project-diagram' },
+    { id: 'crm', label: 'CRM', icon: 'fas fa-users' },
     { id: 'finance', label: 'Финансы', icon: 'fas fa-coins' },
     { id: 'reports', label: 'Отчеты', icon: 'fas fa-file-chart' }
   ];
