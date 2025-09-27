@@ -13,6 +13,7 @@ import ERPDashboard from './pages/ERPDashboard';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import PremiumCatalog from './pages/PremiumCatalog';
+import SubscriptionPage from './pages/SubscriptionPage';
 
 // Components
 import Header from './components/Header';
