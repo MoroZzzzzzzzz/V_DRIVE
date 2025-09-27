@@ -8,6 +8,8 @@ import FeaturedCars from '../components/FeaturedCars';
 import TopDealers from '../components/TopDealers';
 import StatsSection from '../components/StatsSection';
 import NewsSection from '../components/NewsSection';
+import AIRecommendations from '../components/AIRecommendations';
+import AISearch from '../components/AISearch';
 
 const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
