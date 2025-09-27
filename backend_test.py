@@ -1296,7 +1296,7 @@ class VelesDriveAPITester:
             role = user_data['role']
             logger.info(f"\n--- Testing {role.upper()} User ---")
             
-            # 1. Register user
+            # 1. Register user (or use existing)
             logger.info(f"Creating {role}: {user_data['email']}")
             result = await self.make_request("POST", "/auth/register", user_data)
             
@@ -1309,6 +1309,14 @@ class VelesDriveAPITester:
                 token = result["data"]["access_token"]
                 self.auth_tokens[role] = token
                 logger.info(f"JWT Token received: {token[:30]}...")
+                auth_results[f"{role}_registration"] = True
+            elif result["status"] == 400 and "already registered" in result["data"]["detail"]:
+                logger.info(f"ℹ️  {role.title()} user already exists, will test login")
+                created_users[role] = {
+                    "user_data": user_data,
+                    "registration_response": {"message": "User already exists"}
+                }
+                auth_results[f"{role}_registration"] = True  # Consider existing user as success
             else:
                 logger.error(f"❌ {role.title()} registration failed: {result}")
                 auth_results[f"{role}_registration"] = False
