@@ -1156,7 +1156,7 @@ class VelesDriveAPITester:
         
         test_results = {}
         
-        # Test sequence
+        # Test sequence - including new features
         tests = [
             ("Basic Connectivity", self.test_basic_connectivity),
             ("Authentication System", self.test_authentication_system),
@@ -1167,7 +1167,13 @@ class VelesDriveAPITester:
             ("ERP System", self.test_erp_system),
             ("Notifications System", self.test_notifications_system),
             ("File Upload System", self.test_file_upload_system),
-            ("Favorites System", self.test_favorites_system)
+            ("Favorites System", self.test_favorites_system),
+            ("Car Comparison System", self.test_car_comparison_system),
+            ("View History System", self.test_view_history_system),
+            ("CRM System", self.test_crm_system),
+            ("Additional Services", self.test_additional_services),
+            ("Admin Panel", self.test_admin_panel),
+            ("Vehicle Types System", self.test_vehicle_types_system)
         ]
         
         for test_name, test_func in tests:
