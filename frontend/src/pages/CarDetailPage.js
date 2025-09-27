@@ -267,6 +267,18 @@ const CarDetailPage = () => {
               <p className="text-gray-300 leading-relaxed">{car.description}</p>
             </Card>
           )}
+
+          {/* Reviews Section */}
+          <div className="mt-12">
+            <h3 className="text-2xl font-bold text-white mb-6">
+              Отзывы об автомобиле
+            </h3>
+            <ReviewsSystem 
+              targetId={car.id}
+              targetType="car"
+              targetName={`${car.brand} ${car.model}`}
+            />
+          </div>
         </div>
       </section>
     </div>
