@@ -475,6 +475,15 @@ async def login(login_data: UserLogin):
         "user": user.dict()
     }
 
+@api_router.get("/auth/me", response_model=User)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Get current authenticated user information"""
+    user_dict = current_user.dict()
+    # Remove password hash from response
+    if "password_hash" in user_dict:
+        del user_dict["password_hash"]
+    return user_dict
+
 # Cars routes
 @api_router.get("/cars", response_model=List[Car])
 async def get_cars(
