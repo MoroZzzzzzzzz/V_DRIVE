@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { Navigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import TelegramBot from '../components/TelegramBot';
 
 const ProfilePage = () => {
   const { user, updateUser, isAuthenticated } = useAuth();
