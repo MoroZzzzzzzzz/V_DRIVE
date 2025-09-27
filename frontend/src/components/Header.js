@@ -72,6 +72,17 @@ const Header = () => {
                 Подписка
               </Link>
             )}
+
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin"
+                className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
+              >
+                <i className="fas fa-shield-alt mr-2"></i>
+                Админ
+                <Badge className="bg-red-600 text-white text-xs ml-2">ADMIN</Badge>
+              </Link>
+            )}
           </nav>
 
           {/* User Actions */}
