@@ -50,6 +50,20 @@ class TransactionType(str, Enum):
     PURCHASE = "purchase"
     SERVICE = "service"
 
+class VehicleType(str, Enum):
+    CAR = "car"
+    MOTORCYCLE = "motorcycle"
+    BOAT = "boat"
+    PLANE = "plane"
+
+class LeadStatus(str, Enum):
+    NEW = "new"
+    CONTACTED = "contacted"
+    QUALIFIED = "qualified"
+    PROPOSAL = "proposal"
+    WON = "won"
+    LOST = "lost"
+
 # Models
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
