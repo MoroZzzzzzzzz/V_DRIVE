@@ -1628,10 +1628,82 @@ class VelesDriveAPITester:
             ("CRM System", self.test_crm_system),
             ("Additional Services", self.test_additional_services),
             ("Admin Panel", self.test_admin_panel),
-            ("Vehicle Types System", self.test_vehicle_types_system)
+            ("Vehicle Types System", self.test_vehicle_types_system),
+            ("AI System Comprehensive", self.test_ai_system_comprehensive)
         ]
         
         for test_name, test_func in tests:
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Running: {test_name}")
+            logger.info(f"{'='*60}")
+            
+            try:
+                result = await test_func()
+                test_results[test_name] = result
+                
+                if result:
+                    logger.info(f"✅ {test_name}: PASSED")
+                else:
+                    logger.error(f"❌ {test_name}: FAILED")
+                    
+            except Exception as e:
+                logger.error(f"❌ {test_name}: ERROR - {str(e)}")
+                test_results[test_name] = False
+        
+        return test_results
+
+    async def run_ai_tests_only(self) -> Dict[str, bool]:
+        """Run only AI-related tests as requested"""
+        logger.info("🤖 Starting VELES DRIVE AI Functions Testing")
+        logger.info(f"Testing API at: {self.base_url}")
+        logger.info("Testing specific AI functions as requested:")
+        logger.info("1. AI Рекомендации - /api/ai/recommendations")
+        logger.info("2. AI Поиск - /api/ai/search")
+        logger.info("3. AI Чат-ассистент - /api/ai/chat")
+        logger.info("4. AI Улучшение описаний - /api/ai/enhance-description/{car_id}")
+        logger.info("5. AI Аналитика - /api/ai/market-insights")
+        
+        test_results = {}
+        
+        # First ensure basic connectivity
+        connectivity_ok = await self.test_basic_connectivity()
+        if not connectivity_ok:
+            logger.error("❌ Basic connectivity failed. Cannot proceed with AI testing.")
+            return {"Basic Connectivity": False}
+        
+        test_results["Basic Connectivity"] = True
+        
+        # Create test users and basic data needed for AI tests
+        logger.info("\n🔧 Setting up test environment for AI testing...")
+        
+        # Create specific test users
+        users_created = await self.create_specific_test_users()
+        test_results["Test Users Creation"] = users_created
+        
+        if not users_created:
+            logger.error("❌ Failed to create test users. Cannot proceed with AI testing.")
+            return test_results
+        
+        # Create some test data (cars, dealers) needed for AI functions
+        if "dealer" in self.auth_tokens:
+            # Create dealer profile
+            dealer_created = await self.test_dealer_system()
+            test_results["Dealer Setup"] = dealer_created
+            
+            # Create some cars for AI to work with
+            cars_created = await self.test_cars_system()
+            test_results["Cars Setup"] = cars_created
+        
+        # Now run AI-specific tests
+        ai_tests = [
+            ("AI Recommendations", self.test_ai_recommendations_system),
+            ("AI Search", self.test_ai_search_system),
+            ("AI Chat Assistant", self.test_ai_chat_assistant),
+            ("AI Description Enhancement", self.test_ai_description_enhancement),
+            ("AI Market Insights", self.test_ai_market_insights)
+        ]
+        
+        for test_name, test_func in ai_tests:
             logger.info(f"\n{'='*60}")
             logger.info(f"Running: {test_name}")
             logger.info(f"{'='*60}")
