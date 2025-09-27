@@ -29,11 +29,12 @@ function App() {
   return (
     <AuthProvider>
       <FavoritesProvider>
-        <div className="App min-h-screen bg-black text-white">
-          <BrowserRouter>
-            <Header />
-            <main className="min-h-screen">
-              <Routes>
+        <NotificationProvider>
+          <div className="App min-h-screen bg-black text-white">
+            <BrowserRouter>
+              <Header />
+              <main className="min-h-screen">
+                <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/catalog" element={<CatalogPage />} />
                 <Route path="/premium" element={<PremiumCatalog />} />
