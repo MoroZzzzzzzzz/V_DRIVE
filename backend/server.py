@@ -17,6 +17,7 @@ from passlib.context import CryptContext
 from integrations import notification_service
 from file_upload import file_upload_service
 from ai_services import ai_recommendation_service, ai_virtual_assistant, ai_analytics_service, process_natural_language_search, ChatMessage
+from security import two_factor_auth, security_service, data_encryption, audit_log
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
