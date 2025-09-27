@@ -1275,7 +1275,7 @@ async def get_loan_applications(current_user: User = Depends(get_current_user)):
     return [LoanApplication(**app) for app in applications]
 
 @api_router.post("/services/leasing/apply", response_model=LeaseApplication)
-async def apply_for_lease(lease_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+async def apply_for_lease(lease_data: Dict[str, Any], current_user: User = Depends(get_current_user)):
     """Apply for car leasing"""
     
     # Verify car exists
