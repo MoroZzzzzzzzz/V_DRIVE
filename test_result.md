@@ -131,8 +131,8 @@ VELES DRIVE - современная платформа для автомоби�
         comment: "JWT auth с регистрацией и логином работает"
 
   - task: "Система отзывов API"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -141,6 +141,9 @@ VELES DRIVE - современная платформа для автомоби�
       - working: "NA"
         agent: "main"
         comment: "Модель Review есть, но нет endpoints для CRUD операций"
+      - working: true
+        agent: "main"
+        comment: "Добавлены endpoints для отзывов: GET /reviews/dealer/{id}, POST /reviews, GET /reviews/my с email уведомлениями"
 
   - task: "Система аукционов"
     implemented: false
