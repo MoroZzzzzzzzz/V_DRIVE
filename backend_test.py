@@ -75,9 +75,17 @@ class VelesDriveAPITester:
                         return {"status": response.status, "data": result}
                         
             elif method.upper() == 'PUT':
-                async with self.session.put(url, json=data, headers=request_headers) as response:
-                    result = await response.json()
-                    return {"status": response.status, "data": result}
+                if files:
+                    # For form data, don't set Content-Type header
+                    if 'Content-Type' in request_headers:
+                        del request_headers['Content-Type']
+                    async with self.session.put(url, data=files, headers=request_headers) as response:
+                        result = await response.json()
+                        return {"status": response.status, "data": result}
+                else:
+                    async with self.session.put(url, json=data, headers=request_headers) as response:
+                        result = await response.json()
+                        return {"status": response.status, "data": result}
                     
             elif method.upper() == 'DELETE':
                 async with self.session.delete(url, headers=request_headers) as response:
