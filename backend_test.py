@@ -78,10 +78,11 @@ class VelesDriveAPITester:
                         
             elif method.upper() == 'PUT':
                 if files:
-                    # For form data, don't set Content-Type header
-                    if 'Content-Type' in request_headers:
-                        del request_headers['Content-Type']
-                    async with self.session.put(url, data=files, headers=request_headers) as response:
+                    # For form data, let aiohttp set the Content-Type header
+                    headers_copy = request_headers.copy()
+                    if 'Content-Type' in headers_copy:
+                        del headers_copy['Content-Type']
+                    async with self.session.put(url, data=files, headers=headers_copy) as response:
                         result = await response.json()
                         return {"status": response.status, "data": result}
                 else:
