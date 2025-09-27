@@ -130,7 +130,7 @@ class VelesDriveAPITester:
         test_users = [
             {
                 "email": f"dealer_{uuid.uuid4().hex[:8]}@velesdrive.com",
-                "password": "SecurePass123!",
+                "password": "Pass123!",
                 "full_name": "Тест Дилер",
                 "phone": "+7-900-123-4567",
                 "role": "dealer",
@@ -138,7 +138,7 @@ class VelesDriveAPITester:
             },
             {
                 "email": f"customer_{uuid.uuid4().hex[:8]}@velesdrive.com", 
-                "password": "SecurePass123!",
+                "password": "Pass123!",
                 "full_name": "Тест Покупатель",
                 "phone": "+7-900-765-4321",
                 "role": "buyer"
