@@ -1,53 +1,51 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
+import '@/App.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Pages
+import HomePage from './pages/HomePage';
+import CatalogPage from './pages/CatalogPage';
+import CarDetailPage from './pages/CarDetailPage';
+import DealersPage from './pages/DealersPage';
+import DealerDetailPage from './pages/DealerDetailPage';
+import ERPDashboard from './pages/ERPDashboard';
+import AuthPage from './pages/AuthPage';
+import ProfilePage from './pages/ProfilePage';
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+// Components
+import Header from './components/Header';
+import Footer from './components/Footer';
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+// Context
+import { AuthProvider } from './contexts/AuthContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <AuthProvider>
+      <FavoritesProvider>
+        <div className="App min-h-screen bg-black text-white">
+          <BrowserRouter>
+            <Header />
+            <main className="min-h-screen">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/catalog" element={<CatalogPage />} />
+                <Route path="/car/:id" element={<CarDetailPage />} />
+                <Route path="/dealers" element={<DealersPage />} />
+                <Route path="/dealer/:id" element={<DealerDetailPage />} />
+                <Route path="/erp" element={<ERPDashboard />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+              </Routes>
+            </main>
+            <Footer />
+          </BrowserRouter>
+          <Toaster />
+        </div>
+      </FavoritesProvider>
+    </AuthProvider>
   );
 }
 
