@@ -115,10 +115,12 @@ const HomePage = () => {
               Персональный подход и эксклюзивные предложения.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="btn-gold text-lg px-8 py-4">
-                <i className="fas fa-crown mr-2"></i>
-                Смотреть премиум
-              </Button>
+              <Link to="/premium">
+                <Button className="btn-gold text-lg px-8 py-4">
+                  <i className="fas fa-crown mr-2"></i>
+                  Смотреть премиум
+                </Button>
+              </Link>
               <Button className="btn-outline-gold text-lg px-8 py-4">
                 <i className="fas fa-phone mr-2"></i>
                 Связаться с консультантом
