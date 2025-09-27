@@ -33,6 +33,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/catalog" element={<CatalogPage />} />
+                <Route path="/premium" element={<PremiumCatalog />} />
                 <Route path="/car/:id" element={<CarDetailPage />} />
                 <Route path="/dealers" element={<DealersPage />} />
                 <Route path="/dealer/:id" element={<DealerDetailPage />} />
