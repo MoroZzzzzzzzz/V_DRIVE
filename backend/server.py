@@ -577,7 +577,6 @@ async def login(credentials: Dict[str, str], request: Request):
     
     # Remove sensitive data from response
     user_dict = user.dict()
-    del user_dict["password_hash"]
     if "two_fa_secret" in user_dict:
         del user_dict["two_fa_secret"]
     if "backup_codes" in user_dict:
