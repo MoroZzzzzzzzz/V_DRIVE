@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const { user, login, register } = useAuth();
+  const { user, login, register } = useContext(AuthContext);
   
   const [loginForm, setLoginForm] = useState({
     email: '',
