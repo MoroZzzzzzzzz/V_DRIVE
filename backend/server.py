@@ -499,7 +499,7 @@ async def login(credentials: Dict[str, str], request: Request):
         raise HTTPException(status_code=423, detail="Account temporarily locked")
     
     # Verify password
-    if not pwd_context.verify(password, user.password_hash):
+    if not pwd_context.verify(password, user_data["password"]):
         # Record failed attempt
         security_result = security_service.record_failed_attempt(client_ip, user.id)
         
