@@ -1181,10 +1181,8 @@ class VelesDriveAPITester:
         result = {"status": 200, "data": stats_summary}
         
         if result["status"] == 200:
-            logger.info("✅ Vehicle statistics retrieved")
-            stats = result["data"]
-            for vehicle_type, data in stats.items():
-                logger.info(f"{vehicle_type.title()}s: {data['count']} available, avg price: {data['price_range']['average']:.0f} RUB")
+            logger.info("✅ Vehicle statistics retrieved successfully")
+            # Stats were already logged above, no need to log again
         else:
             logger.error(f"❌ Failed to get vehicle stats: {result}")
             success = False
