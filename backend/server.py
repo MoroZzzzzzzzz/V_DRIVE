@@ -1544,6 +1544,78 @@ async def get_sales_report(
         "top_dealers": top_dealers
     }
 
+# Vehicle type specific routes
+@api_router.get("/vehicles/{vehicle_type}", response_model=List[Car])
+async def get_vehicles_by_type(
+    vehicle_type: VehicleType,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_year: Optional[int] = None,
+    max_year: Optional[int] = None,
+    is_premium: Optional[bool] = None,
+    limit: int = Query(20, le=100)
+):
+    """Get vehicles by type (cars, motorcycles, boats, planes)"""
+    
+    filter_query = {"status": "available", "vehicle_type": vehicle_type.value}
+    
+    if brand:
+        filter_query["brand"] = {"$regex": brand, "$options": "i"}
+    if model:
+        filter_query["model"] = {"$regex": model, "$options": "i"}
+    if min_price is not None:
+        filter_query.setdefault("price", {})["$gte"] = min_price
+    if max_price is not None:
+        filter_query.setdefault("price", {})["$lte"] = max_price
+    if min_year is not None:
+        filter_query.setdefault("year", {})["$gte"] = min_year
+    if max_year is not None:
+        filter_query.setdefault("year", {})["$lte"] = max_year
+    if is_premium is not None:
+        filter_query["is_premium"] = is_premium
+    
+    vehicles = await db.cars.find(filter_query).limit(limit).to_list(length=None)
+    return [Car(**vehicle) for vehicle in vehicles]
+
+@api_router.get("/vehicles/stats")
+async def get_vehicles_stats():
+    """Get statistics by vehicle type"""
+    
+    stats = {}
+    
+    for vehicle_type in VehicleType:
+        count = await db.cars.count_documents({
+            "vehicle_type": vehicle_type.value,
+            "status": "available"
+        })
+        
+        # Get price range
+        vehicles = await db.cars.find({
+            "vehicle_type": vehicle_type.value,
+            "status": "available"
+        }).to_list(length=None)
+        
+        if vehicles:
+            prices = [v["price"] for v in vehicles]
+            min_price = min(prices)
+            max_price = max(prices)
+            avg_price = sum(prices) / len(prices)
+        else:
+            min_price = max_price = avg_price = 0
+        
+        stats[vehicle_type.value] = {
+            "count": count,
+            "price_range": {
+                "min": min_price,
+                "max": max_price,
+                "average": avg_price
+            }
+        }
+    
+    return stats
+
 # Include routers
 app.include_router(api_router)
 app.include_router(payments_router)
