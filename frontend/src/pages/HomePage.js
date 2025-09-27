@@ -37,6 +37,28 @@ const HomePage = () => {
       {/* Hero Section */}
       <HeroSection />
 
+      {/* AI Search Section */}
+      <section className="section-padding bg-gradient-to-b from-gray-900 to-black">
+        <div className="max-w-7xl mx-auto container-padding">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span className="gold-gradient">AI-поиск автомобилей</span>
+            </h2>
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+              Найдите идеальный автомобиль с помощью искусственного интеллекта
+            </p>
+          </div>
+          <AISearch />
+        </div>
+      </section>
+
+      {/* AI Recommendations Section */}
+      <section className="section-padding bg-black">
+        <div className="max-w-7xl mx-auto container-padding">
+          <AIRecommendations />
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="section-padding bg-gradient-to-b from-black to-gray-900">
         <div className="max-w-7xl mx-auto container-padding">
