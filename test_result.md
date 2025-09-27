@@ -176,8 +176,8 @@ VELES DRIVE - современная платформа для автомоби�
         comment: "Добавлены полные CRUD операции для проектов (Trello-стиль), расширен dashboard с транзакциями и статистикой"
 
   - task: "Система уведомлений"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
@@ -186,6 +186,9 @@ VELES DRIVE - современная платформа для автомоби�
       - working: "NA"
         agent: "main"
         comment: "Backend для notifications отсутствует"
+      - working: true
+        agent: "main"
+        comment: "Добавлена полная система уведомлений с API endpoints, интеграцией с email/telegram сервисами и автоматическими уведомлениями"
 
   - task: "Telegram bot интеграция"
     implemented: true
