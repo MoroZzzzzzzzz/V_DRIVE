@@ -47,11 +47,12 @@ function App() {
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Routes>
-            </main>
-            <Footer />
-          </BrowserRouter>
-          <Toaster />
-        </div>
+              </main>
+              <Footer />
+            </BrowserRouter>
+            <Toaster />
+          </div>
+        </NotificationProvider>
       </FavoritesProvider>
     </AuthProvider>
   );
