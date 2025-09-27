@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
+import CarsManagement from '../components/erp/CarsManagement';
+import SalesManagement from '../components/erp/SalesManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
