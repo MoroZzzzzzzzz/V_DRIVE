@@ -181,6 +181,19 @@ const Header = () => {
                 </Link>
               )}
 
+              {user?.role === 'dealer' && (
+                <Link
+                  to="/subscription"
+                  className={`block px-4 py-3 text-white hover:text-gold hover:bg-gray-900/50 rounded ${
+                    isActive('/subscription') ? 'bg-gold/10 text-gold' : ''
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <i className="fas fa-crown mr-3"></i>
+                  Подписка
+                </Link>
+              )}
+
               {!user && (
                 <div className="px-4 py-3 space-y-2 border-t border-gold/20 mt-4">
                   <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
