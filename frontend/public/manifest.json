@@ -1,0 +1,103 @@
+{
+  "short_name": "VELES DRIVE",
+  "name": "VELES DRIVE - Premium Automotive Platform",
+  "description": "Современная платформа для автомобильного бизнеса с AI-возможностями",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#D4AF37",
+  "background_color": "#000000",
+  "categories": ["business", "automotive", "shopping"],
+  "lang": "ru",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "Каталог автомобилей",
+      "short_name": "Каталог",
+      "description": "Просмотр всех автомобилей",
+      "url": "/catalog",
+      "icons": [{"src": "/icon-96x96.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "AI Поиск",
+      "short_name": "AI Поиск", 
+      "description": "Умный поиск автомобилей",
+      "url": "/?ai-search=true",
+      "icons": [{"src": "/icon-96x96.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "Аукционы",
+      "short_name": "Аукционы",
+      "description": "Торги за автомобили",
+      "url": "/auctions", 
+      "icons": [{"src": "/icon-96x96.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "ERP Панель",
+      "short_name": "ERP",
+      "description": "Управление бизнесом",
+      "url": "/erp",
+      "icons": [{"src": "/icon-96x96.png", "sizes": "96x96"}]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "VELES DRIVE Mobile Interface"
+    },
+    {
+      "src": "/screenshot-desktop.png", 
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "VELES DRIVE Desktop Interface"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+velesdrive",
+      "url": "/?car=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text", 
+      "url": "url"
+    }
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "navigate-new"]
+  }
+}
