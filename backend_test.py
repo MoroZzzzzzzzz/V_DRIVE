@@ -654,12 +654,6 @@ class VelesDriveAPITester:
         car_ids = [car["id"] for car in self.test_data["cars"][:2]]
         
         # Create comparison using form data
-        comparison_data = {
-            "car_ids": car_ids,
-            "name": "BMW vs Mercedes Comparison"
-        }
-        
-        # Convert to form data format
         form_data = aiohttp.FormData()
         for car_id in car_ids:
             form_data.add_field("car_ids", car_id)
