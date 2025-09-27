@@ -54,6 +54,12 @@ function App() {
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Routes>
+              
+              {/* AI Assistant */}
+              <AIAssistant 
+                isOpen={showAIAssistant} 
+                onToggle={() => setShowAIAssistant(!showAIAssistant)} 
+              />
               </main>
               <Footer />
             </BrowserRouter>
