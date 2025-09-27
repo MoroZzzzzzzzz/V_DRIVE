@@ -469,22 +469,121 @@ async def register(user_data: UserCreate):
     }
 
 @api_router.post("/auth/login", response_model=Dict[str, Any])
-async def login(login_data: UserLogin):
-    user_data = await db.users.find_one({"email": login_data.email})
-    if not user_data or not verify_password(login_data.password, user_data["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+async def login(credentials: Dict[str, str], request: Request):
+    email = credentials.get("email")
+    password = credentials.get("password")
+    two_fa_token = credentials.get("two_fa_token")  # Optional 2FA token
+    backup_code = credentials.get("backup_code")    # Optional backup code
     
-    if not user_data["is_active"]:
-        raise HTTPException(status_code=401, detail="Account is disabled")
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+    
+    # Get client IP for security monitoring
+    client_ip = request.client.host
+    
+    # Check if IP is blocked
+    if security_service.is_ip_blocked(client_ip):
+        raise HTTPException(status_code=429, detail="IP заблокирован из-за подозрительной активности")
+    
+    # Find user
+    user_data = await db.users.find_one({"email": email})
+    if not user_data:
+        # Record failed attempt
+        security_service.record_failed_attempt(client_ip)
+        raise HTTPException(status_code=400, detail="Invalid email or password")
     
     user = User(**user_data)
+    
+    # Check if account is locked
+    if user.account_locked_until and datetime.now(timezone.utc) < user.account_locked_until:
+        raise HTTPException(status_code=423, detail="Account temporarily locked")
+    
+    # Verify password
+    if not pwd_context.verify(password, user.password_hash):
+        # Record failed attempt
+        security_result = security_service.record_failed_attempt(client_ip, user.id)
+        
+        # Update user login attempts
+        await db.users.update_one(
+            {"id": user.id},
+            {"$inc": {"login_attempts": 1}}
+        )
+        
+        # Lock account after 10 failed attempts
+        if user.login_attempts >= 9:  # Will be 10 after increment
+            lock_until = datetime.now(timezone.utc) + timedelta(hours=1)
+            await db.users.update_one(
+                {"id": user.id},
+                {"$set": {"account_locked_until": lock_until}}
+            )
+            
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+    
+    # Check 2FA if enabled
+    if user.two_fa_enabled:
+        if not two_fa_token and not backup_code:
+            return {
+                "requires_2fa": True,
+                "message": "Введите код из приложения аутентификатора или резервный код"
+            }
+        
+        # Verify 2FA token or backup code
+        is_2fa_valid = False
+        used_backup_code = None
+        
+        if backup_code:
+            if backup_code in user.backup_codes:
+                is_2fa_valid = True
+                used_backup_code = backup_code
+        elif two_fa_token:
+            is_2fa_valid = two_factor_auth.verify_token(user.two_fa_secret, two_fa_token)
+        
+        if not is_2fa_valid:
+            security_service.record_failed_attempt(client_ip, user.id)
+            raise HTTPException(status_code=400, detail="Invalid 2FA code")
+        
+        # Remove used backup code
+        if used_backup_code:
+            remaining_codes = [code for code in user.backup_codes if code != used_backup_code]
+            await db.users.update_one(
+                {"id": user.id},
+                {"$set": {"backup_codes": remaining_codes}}
+            )
+    
+    # Successful login - clear failed attempts and update last login
+    security_service.clear_failed_attempts(client_ip)
+    await db.users.update_one(
+        {"id": user.id},
+        {"$set": {
+            "last_login": datetime.now(timezone.utc),
+            "login_attempts": 0,
+            "account_locked_until": None
+        }}
+    )
+    
+    # Log successful login
+    audit_log.log_user_action(
+        user_id=user.id,
+        action="login",
+        ip_address=client_ip,
+        details={
+            "method": "2fa" if user.two_fa_enabled else "password",
+            "user_agent": request.headers.get("user-agent", "")
+        }
+    )
+    
+    # Create token
     token = create_access_token({"user_id": user.id, "email": user.email})
     
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": user.dict()
-    }
+    # Remove sensitive data from response
+    user_dict = user.dict()
+    del user_dict["password_hash"]
+    if "two_fa_secret" in user_dict:
+        del user_dict["two_fa_secret"]
+    if "backup_codes" in user_dict:
+        del user_dict["backup_codes"]
+    
+    return {"access_token": token, "token_type": "bearer", "user": user_dict}
 
 @api_router.get("/auth/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
