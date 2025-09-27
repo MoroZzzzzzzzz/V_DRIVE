@@ -26,6 +26,10 @@ const Header = () => {
     { path: '/dealers', label: 'Дилеры', icon: 'fas fa-store' },
   ];
 
+  const userNavigationItems = [
+    { path: '/compare', label: 'Сравнение', icon: 'fas fa-balance-scale' },
+  ];
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur border-b border-gold/20">
       <div className="max-w-7xl mx-auto container-padding">
