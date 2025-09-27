@@ -575,7 +575,12 @@ async def place_bid(auction_id: str, bid_data: BidCreate, current_user: User = D
     if auction.status != AuctionStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Auction is not active")
     
-    if datetime.now(timezone.utc) > auction.end_time:
+    current_time = datetime.now(timezone.utc)
+    auction_end_time = auction.end_time
+    if auction_end_time.tzinfo is None:
+        auction_end_time = auction_end_time.replace(tzinfo=timezone.utc)
+    
+    if current_time > auction_end_time:
         raise HTTPException(status_code=400, detail="Auction has ended")
     
     # Check if bid amount is valid
