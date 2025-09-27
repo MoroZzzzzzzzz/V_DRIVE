@@ -54,6 +54,10 @@ class VelesDriveAPITester:
         url = f"{self.base_url}{endpoint}"
         request_headers = headers or {}
         
+        # Set default Content-Type for JSON requests
+        if not files and 'Content-Type' not in request_headers:
+            request_headers['Content-Type'] = 'application/json'
+        
         try:
             if method.upper() == 'GET':
                 async with self.session.get(url, headers=request_headers, params=data) as response:
