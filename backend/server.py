@@ -1227,7 +1227,7 @@ async def get_user_insurance_quotes(current_user: User = Depends(get_current_use
     return [InsuranceQuote(**quote) for quote in quotes]
 
 @api_router.post("/services/loans/apply", response_model=LoanApplication)
-async def apply_for_loan(loan_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+async def apply_for_loan(loan_data: Dict[str, Any], current_user: User = Depends(get_current_user)):
     """Apply for auto loan"""
     
     # Verify car exists
