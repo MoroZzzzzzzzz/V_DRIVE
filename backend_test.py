@@ -63,7 +63,7 @@ class VelesDriveAPITester:
                     
             elif method.upper() == 'POST':
                 if files:
-                    # For file uploads, don't set Content-Type header
+                    # For file uploads and form data, don't set Content-Type header
                     if 'Content-Type' in request_headers:
                         del request_headers['Content-Type']
                     async with self.session.post(url, data=files, headers=request_headers) as response:
