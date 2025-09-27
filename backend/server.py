@@ -250,6 +250,149 @@ class ProjectUpdate(BaseModel):
     priority: Optional[str] = None
     due_date: Optional[datetime] = None
 
+# Additional models for missing functionality
+class ViewHistory(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    car_id: str
+    viewed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CarComparison(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    car_ids: List[str]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    name: Optional[str] = None
+
+class Customer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    user_id: Optional[str] = None  # If registered user
+    name: str
+    email: str
+    phone: str
+    address: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_contact: Optional[datetime] = None
+    tags: List[str] = []
+    status: str = "active"  # active, inactive, potential
+
+class CustomerCreate(BaseModel):
+    name: str
+    email: str
+    phone: str
+    address: Optional[str] = None
+    notes: Optional[str] = None
+    tags: List[str] = []
+
+class Sale(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    customer_id: str
+    car_id: str
+    sale_price: float
+    sale_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    status: str = "completed"  # pending, completed, cancelled
+    commission: Optional[float] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
+class ServiceRecord(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    customer_id: str
+    car_id: Optional[str] = None
+    service_type: str
+    description: str
+    cost: float
+    service_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    next_service_date: Optional[datetime] = None
+    status: str = "completed"  # scheduled, in_progress, completed
+
+class PersonalOffer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    customer_id: str
+    car_id: str
+    offer_price: float
+    regular_price: float
+    discount_percent: float
+    message: str
+    valid_until: datetime
+    status: str = "active"  # active, accepted, declined, expired
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class VehicleType(str, Enum):
+    CAR = "car"
+    MOTORCYCLE = "motorcycle"
+    BOAT = "boat"
+    PLANE = "plane"
+
+class LeadStatus(str, Enum):
+    NEW = "new"
+    CONTACTED = "contacted"
+    QUALIFIED = "qualified"
+    PROPOSAL = "proposal"
+    WON = "won"
+    LOST = "lost"
+
+class Lead(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    name: str
+    email: str
+    phone: str
+    interested_car_id: Optional[str] = None
+    budget_min: Optional[float] = None
+    budget_max: Optional[float] = None
+    status: LeadStatus = LeadStatus.NEW
+    source: str = "website"  # website, phone, referral, etc.
+    notes: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_contact: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+
+class InsuranceQuote(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    car_id: str
+    insurance_type: str = "OSAGO"  # OSAGO, KASKO, FULL
+    coverage_amount: float
+    monthly_premium: float
+    yearly_premium: float
+    provider: str
+    valid_until: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoanApplication(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    car_id: str
+    loan_amount: float
+    monthly_income: float
+    employment_status: str
+    loan_term_months: int
+    interest_rate: Optional[float] = None
+    monthly_payment: Optional[float] = None
+    status: str = "pending"  # pending, approved, rejected
+    bank_partner: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    approved_at: Optional[datetime] = None
+
+class LeaseApplication(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    car_id: str
+    lease_term_months: int
+    monthly_payment: float
+    down_payment: float
+    residual_value: float
+    status: str = "pending"  # pending, approved, rejected
+    leasing_company: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    approved_at: Optional[datetime] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
