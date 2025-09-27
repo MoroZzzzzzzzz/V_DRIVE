@@ -12,6 +12,7 @@ import DealerDetailPage from './pages/DealerDetailPage';
 import ERPDashboard from './pages/ERPDashboard';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
+import PremiumCatalog from './pages/PremiumCatalog';
 
 // Components
 import Header from './components/Header';
