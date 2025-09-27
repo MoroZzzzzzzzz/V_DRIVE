@@ -276,6 +276,7 @@ const ERPDashboard = () => {
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'cars' && <CarsManagement />}
           {activeTab === 'sales' && <SalesManagement />}
+          {activeTab === 'projects' && <ProjectsManagement />}
           {activeTab === 'finance' && renderPlaceholder('Финансы', 'fas fa-coins')}
           {activeTab === 'reports' && renderPlaceholder('Отчеты', 'fas fa-file-chart')}
         </div>
