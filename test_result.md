@@ -190,7 +190,7 @@ VELES DRIVE - современная платформа для автомоби�
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -198,6 +198,9 @@ VELES DRIVE - современная платформа для автомоби�
       - working: true
         agent: "main"
         comment: "Добавлена полная система уведомлений с API endpoints, интеграцией с email/telegram сервисами и автоматическими уведомлениями"
+      - working: true
+        agent: "testing"
+        comment: "✅ Протестировано: получение уведомлений, пометка как прочитанное. API endpoints работают корректно. Интеграция с email/telegram настроена в коде."
 
   - task: "Telegram bot интеграция"
     implemented: true
