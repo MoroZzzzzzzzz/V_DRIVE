@@ -1258,15 +1258,272 @@ class VelesDriveAPITester:
         
         return passed == total
 
+    async def test_specific_user_creation_and_auth(self) -> Dict[str, Any]:
+        """Create specific test users and test authentication as requested"""
+        logger.info("👤 Creating Specific Test Users and Testing Authentication...")
+        
+        # Specific test users as requested
+        test_users = [
+            {
+                "email": "buyer@test.com",
+                "password": "testpass123",
+                "full_name": "Test Buyer",
+                "phone": "+7-900-123-4567",
+                "role": "buyer"
+            },
+            {
+                "email": "dealer@test.com", 
+                "password": "testpass123",
+                "full_name": "Test Dealer",
+                "phone": "+7-900-765-4321",
+                "role": "dealer",
+                "company_name": "Test Auto Dealer"
+            },
+            {
+                "email": "admin@test.com",
+                "password": "testpass123", 
+                "full_name": "Test Admin",
+                "phone": "+7-900-555-0000",
+                "role": "admin"
+            }
+        ]
+        
+        created_users = {}
+        auth_results = {}
+        
+        # Create and test each user
+        for user_data in test_users:
+            role = user_data['role']
+            logger.info(f"\n--- Testing {role.upper()} User ---")
+            
+            # 1. Register user
+            logger.info(f"Creating {role}: {user_data['email']}")
+            result = await self.make_request("POST", "/auth/register", user_data)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ {role.title()} registration successful")
+                created_users[role] = {
+                    "user_data": user_data,
+                    "registration_response": result["data"]
+                }
+                token = result["data"]["access_token"]
+                self.auth_tokens[role] = token
+                logger.info(f"JWT Token received: {token[:30]}...")
+            else:
+                logger.error(f"❌ {role.title()} registration failed: {result}")
+                auth_results[f"{role}_registration"] = False
+                continue
+            
+            # 2. Test login
+            login_data = {
+                "email": user_data["email"],
+                "password": user_data["password"]
+            }
+            
+            logger.info(f"Testing login for {role}: {user_data['email']}")
+            result = await self.make_request("POST", "/auth/login", login_data)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ {role.title()} login successful")
+                auth_results[f"{role}_login"] = True
+                # Update token from login
+                token = result["data"]["access_token"]
+                self.auth_tokens[role] = token
+                logger.info(f"New JWT Token: {token[:30]}...")
+                
+                # Verify user data in response
+                user_info = result["data"]["user"]
+                logger.info(f"User ID: {user_info['id']}")
+                logger.info(f"Role: {user_info['role']}")
+                logger.info(f"Email: {user_info['email']}")
+            else:
+                logger.error(f"❌ {role.title()} login failed: {result}")
+                auth_results[f"{role}_login"] = False
+                continue
+            
+            # 3. Test /api/auth/me endpoint
+            headers = {"Authorization": f"Bearer {self.auth_tokens[role]}"}
+            logger.info(f"Testing /api/auth/me for {role}")
+            result = await self.make_request("GET", "/auth/me", headers=headers)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ /api/auth/me successful for {role}")
+                auth_results[f"{role}_auth_me"] = True
+                user_info = result["data"]
+                logger.info(f"Authenticated as: {user_info['full_name']} ({user_info['role']})")
+                
+                # Verify role is correct
+                if user_info['role'] == role:
+                    logger.info(f"✅ Role verification successful: {role}")
+                    auth_results[f"{role}_role_verification"] = True
+                else:
+                    logger.error(f"❌ Role mismatch: expected {role}, got {user_info['role']}")
+                    auth_results[f"{role}_role_verification"] = False
+            else:
+                logger.error(f"❌ /api/auth/me failed for {role}: {result}")
+                auth_results[f"{role}_auth_me"] = False
+                auth_results[f"{role}_role_verification"] = False
+        
+        # 4. Test access to protected resources based on roles
+        logger.info(f"\n--- Testing Role-Based Access Control ---")
+        
+        # Test buyer access to comparisons and history
+        if "buyer" in self.auth_tokens:
+            logger.info("Testing buyer access to protected resources...")
+            buyer_headers = {"Authorization": f"Bearer {self.auth_tokens['buyer']}"}
+            
+            # Test comparisons access
+            result = await self.make_request("GET", "/comparisons", headers=buyer_headers)
+            if result["status"] == 200:
+                logger.info("✅ Buyer can access comparisons")
+                auth_results["buyer_comparisons_access"] = True
+            else:
+                logger.error(f"❌ Buyer cannot access comparisons: {result}")
+                auth_results["buyer_comparisons_access"] = False
+            
+            # Test view history access
+            result = await self.make_request("GET", "/cars/history", headers=buyer_headers)
+            if result["status"] in [200, 404]:  # 404 is OK if no history exists
+                logger.info("✅ Buyer can access view history")
+                auth_results["buyer_history_access"] = True
+            else:
+                logger.error(f"❌ Buyer cannot access view history: {result}")
+                auth_results["buyer_history_access"] = False
+        
+        # Test dealer access to ERP and CRM
+        if "dealer" in self.auth_tokens:
+            logger.info("Testing dealer access to protected resources...")
+            dealer_headers = {"Authorization": f"Bearer {self.auth_tokens['dealer']}"}
+            
+            # Test ERP dashboard access
+            result = await self.make_request("GET", "/erp/dashboard", headers=dealer_headers)
+            if result["status"] == 200:
+                logger.info("✅ Dealer can access ERP dashboard")
+                auth_results["dealer_erp_access"] = True
+                logger.info(f"ERP Stats: {result['data']['stats']}")
+            else:
+                logger.error(f"❌ Dealer cannot access ERP dashboard: {result}")
+                auth_results["dealer_erp_access"] = False
+            
+            # Test CRM access
+            result = await self.make_request("GET", "/crm/customers", headers=dealer_headers)
+            if result["status"] == 200:
+                logger.info("✅ Dealer can access CRM")
+                auth_results["dealer_crm_access"] = True
+            else:
+                logger.error(f"❌ Dealer cannot access CRM: {result}")
+                auth_results["dealer_crm_access"] = False
+        
+        # Test admin access to admin panel
+        if "admin" in self.auth_tokens:
+            logger.info("Testing admin access to protected resources...")
+            admin_headers = {"Authorization": f"Bearer {self.auth_tokens['admin']}"}
+            
+            # Test admin stats access
+            result = await self.make_request("GET", "/admin/stats", headers=admin_headers)
+            if result["status"] == 200:
+                logger.info("✅ Admin can access admin panel")
+                auth_results["admin_panel_access"] = True
+                stats = result["data"]
+                logger.info(f"Platform Stats - Users: {stats['overview']['total_users']}, Cars: {stats['overview']['total_cars']}")
+            else:
+                logger.error(f"❌ Admin cannot access admin panel: {result}")
+                auth_results["admin_panel_access"] = False
+            
+            # Test user management access
+            result = await self.make_request("GET", "/admin/users", headers=admin_headers)
+            if result["status"] == 200:
+                logger.info("✅ Admin can access user management")
+                auth_results["admin_user_management"] = True
+                logger.info(f"Total users in system: {len(result['data'])}")
+            else:
+                logger.error(f"❌ Admin cannot access user management: {result}")
+                auth_results["admin_user_management"] = False
+        
+        # Test unauthorized access (should fail)
+        logger.info(f"\n--- Testing Unauthorized Access (Should Fail) ---")
+        
+        # Test accessing protected endpoint without token
+        result = await self.make_request("GET", "/erp/dashboard")
+        if result["status"] == 401:
+            logger.info("✅ Unauthorized access properly blocked")
+            auth_results["unauthorized_access_blocked"] = True
+        else:
+            logger.error(f"❌ Unauthorized access not properly blocked: {result}")
+            auth_results["unauthorized_access_blocked"] = False
+        
+        # Test buyer trying to access dealer-only resources
+        if "buyer" in self.auth_tokens:
+            buyer_headers = {"Authorization": f"Bearer {self.auth_tokens['buyer']}"}
+            result = await self.make_request("GET", "/erp/dashboard", headers=buyer_headers)
+            if result["status"] == 403:
+                logger.info("✅ Buyer properly blocked from dealer resources")
+                auth_results["buyer_blocked_from_dealer"] = True
+            else:
+                logger.error(f"❌ Buyer not properly blocked from dealer resources: {result}")
+                auth_results["buyer_blocked_from_dealer"] = False
+        
+        return {
+            "created_users": created_users,
+            "auth_results": auth_results,
+            "tokens": self.auth_tokens
+        }
+
 async def main():
     """Main test runner"""
     try:
         async with VelesDriveAPITester() as tester:
-            results = await tester.run_all_tests()
-            success = tester.print_summary(results)
+            # Run specific user creation and authentication tests
+            logger.info("🚀 Starting Specific User Creation and Authentication Testing")
+            logger.info(f"Testing API at: {tester.base_url}")
+            
+            # Test basic connectivity first
+            connectivity_ok = await tester.test_basic_connectivity()
+            if not connectivity_ok:
+                logger.error("❌ Basic connectivity failed. Cannot proceed with testing.")
+                sys.exit(1)
+            
+            # Run specific authentication tests
+            auth_test_results = await tester.test_specific_user_creation_and_auth()
+            
+            # Print detailed results
+            logger.info(f"\n{'='*60}")
+            logger.info("AUTHENTICATION TEST RESULTS SUMMARY")
+            logger.info(f"{'='*60}")
+            
+            created_users = auth_test_results["created_users"]
+            auth_results = auth_test_results["auth_results"]
+            
+            # Print created users credentials
+            logger.info("\n📋 CREATED TEST USERS:")
+            for role, user_info in created_users.items():
+                user_data = user_info["user_data"]
+                logger.info(f"  {role.upper()}:")
+                logger.info(f"    Email: {user_data['email']}")
+                logger.info(f"    Password: {user_data['password']}")
+                logger.info(f"    Role: {user_data['role']}")
+                logger.info(f"    Full Name: {user_data['full_name']}")
+            
+            # Print test results
+            logger.info(f"\n🔍 AUTHENTICATION TEST RESULTS:")
+            passed = 0
+            total = len(auth_results)
+            
+            for test_name, result in auth_results.items():
+                status = "✅ PASSED" if result else "❌ FAILED"
+                logger.info(f"  {test_name:<35} {status}")
+                if result:
+                    passed += 1
+            
+            logger.info(f"\n📊 Overall Results: {passed}/{total} authentication tests passed")
+            
+            if passed == total:
+                logger.info("🎉 All authentication tests passed! Users created successfully.")
+            else:
+                logger.warning(f"⚠️  {total - passed} authentication test(s) failed.")
             
             # Return appropriate exit code
-            sys.exit(0 if success else 1)
+            sys.exit(0 if passed == total else 1)
             
     except KeyboardInterrupt:
         logger.info("\n⏹️  Testing interrupted by user")
