@@ -1125,7 +1125,7 @@ async def record_sale(sale_data: Dict[str, Any], current_user: User = Depends(ge
     return sale
 
 @api_router.post("/crm/offers", response_model=PersonalOffer)
-async def create_personal_offer(offer_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+async def create_personal_offer(offer_data: Dict[str, Any], current_user: User = Depends(get_current_user)):
     """Create personal offer for customer"""
     
     if current_user.role != UserRole.DEALER:
