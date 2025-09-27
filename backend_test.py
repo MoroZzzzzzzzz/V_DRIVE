@@ -634,6 +634,520 @@ class VelesDriveAPITester:
             success = False
         
         return success
+
+    async def test_car_comparison_system(self) -> bool:
+        """Test car comparison functionality"""
+        logger.info("🔍 Testing Car Comparison System...")
+        
+        if "buyer" not in self.auth_tokens or not self.test_data.get("cars"):
+            logger.error("❌ Missing buyer token or cars for comparison testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        
+        # Get at least 2 cars for comparison
+        if len(self.test_data["cars"]) < 2:
+            logger.error("❌ Need at least 2 cars for comparison testing")
+            return False
+        
+        car_ids = [car["id"] for car in self.test_data["cars"][:2]]
+        
+        # Create comparison using form data
+        comparison_data = {
+            "car_ids": car_ids,
+            "name": "BMW vs Mercedes Comparison"
+        }
+        
+        # Convert to form data format
+        form_data = aiohttp.FormData()
+        for car_id in car_ids:
+            form_data.add_field("car_ids", car_id)
+        form_data.add_field("name", "BMW vs Mercedes Comparison")
+        
+        result = await self.make_request("POST", "/comparisons", files=form_data, headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Car comparison created successfully")
+            self.test_data["comparison_id"] = result["data"]["id"]
+        else:
+            logger.error(f"❌ Car comparison creation failed: {result}")
+            success = False
+            return success
+        
+        # Get user's comparisons
+        result = await self.make_request("GET", "/comparisons", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} comparisons")
+        else:
+            logger.error(f"❌ Failed to get comparisons: {result}")
+            success = False
+        
+        # Get cars in comparison
+        comparison_id = self.test_data["comparison_id"]
+        result = await self.make_request("GET", f"/comparisons/{comparison_id}/cars", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} cars in comparison")
+        else:
+            logger.error(f"❌ Failed to get comparison cars: {result}")
+            success = False
+        
+        # Delete comparison
+        result = await self.make_request("DELETE", f"/comparisons/{comparison_id}", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Comparison deleted successfully")
+        else:
+            logger.error(f"❌ Failed to delete comparison: {result}")
+            success = False
+        
+        return success
+
+    async def test_view_history_system(self) -> bool:
+        """Test car view history functionality"""
+        logger.info("👁️ Testing View History System...")
+        
+        if "buyer" not in self.auth_tokens or not self.test_data.get("cars"):
+            logger.error("❌ Missing buyer token or cars for view history testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        car_id = self.test_data["cars"][0]["id"]
+        
+        # Record car view
+        result = await self.make_request("POST", f"/cars/{car_id}/view", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Car view recorded successfully")
+        else:
+            logger.error(f"❌ Failed to record car view: {result}")
+            success = False
+        
+        # Get view history
+        result = await self.make_request("GET", "/cars/history", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} cars from view history")
+        else:
+            logger.error(f"❌ Failed to get view history: {result}")
+            success = False
+        
+        return success
+
+    async def test_crm_system(self) -> bool:
+        """Test CRM system for dealers"""
+        logger.info("👥 Testing CRM System...")
+        
+        if "dealer" not in self.auth_tokens:
+            logger.error("❌ No dealer token available for CRM testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("dealer")
+        
+        # Create customer
+        customer_data = {
+            "name": "Алексей Иванов",
+            "email": f"customer_{uuid.uuid4().hex[:8]}@example.com",
+            "phone": "+7-900-555-1234",
+            "address": "Москва, ул. Ленина, д. 10",
+            "notes": "Заинтересован в премиальных автомобилях",
+            "tags": ["VIP", "Премиум"]
+        }
+        
+        result = await self.make_request("POST", "/crm/customers", customer_data, headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Customer created successfully")
+            self.test_data["customer_id"] = result["data"]["id"]
+        else:
+            logger.error(f"❌ Customer creation failed: {result}")
+            success = False
+            return success
+        
+        # Get customers list
+        result = await self.make_request("GET", "/crm/customers", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} customers")
+        else:
+            logger.error(f"❌ Failed to get customers: {result}")
+            success = False
+        
+        # Get customer details
+        customer_id = self.test_data["customer_id"]
+        result = await self.make_request("GET", f"/crm/customers/{customer_id}", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Retrieved customer details")
+        else:
+            logger.error(f"❌ Failed to get customer details: {result}")
+            success = False
+        
+        # Update customer
+        update_data = {
+            "name": "Алексей Петрович Иванов",
+            "email": customer_data["email"],
+            "phone": customer_data["phone"],
+            "address": "Москва, ул. Тверская, д. 15",
+            "notes": "Обновленная информация о клиенте",
+            "tags": ["VIP", "Премиум", "Постоянный"]
+        }
+        
+        result = await self.make_request("PUT", f"/crm/customers/{customer_id}", update_data, headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Customer updated successfully")
+        else:
+            logger.error(f"❌ Customer update failed: {result}")
+            success = False
+        
+        # Record a sale
+        if self.test_data.get("cars"):
+            sale_data = {
+                "customer_id": customer_id,
+                "car_id": self.test_data["cars"][0]["id"],
+                "sale_price": 5000000.0,
+                "status": "completed",
+                "commission": 250000.0,
+                "payment_method": "Банковский перевод",
+                "notes": "Продажа BMW X5"
+            }
+            
+            result = await self.make_request("POST", "/crm/sales", sale_data, headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ Sale recorded successfully")
+                self.test_data["sale_id"] = result["data"]["id"]
+            else:
+                logger.error(f"❌ Sale recording failed: {result}")
+                success = False
+        
+        # Get customer sales history
+        result = await self.make_request("GET", f"/crm/customers/{customer_id}/sales", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} sales for customer")
+        else:
+            logger.error(f"❌ Failed to get customer sales: {result}")
+            success = False
+        
+        # Create personal offer
+        if self.test_data.get("cars"):
+            offer_data = {
+                "customer_id": customer_id,
+                "car_id": self.test_data["cars"][1]["id"],
+                "offer_price": 3800000.0,
+                "message": "Специальное предложение для VIP клиента",
+                "valid_until": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+            }
+            
+            result = await self.make_request("POST", "/crm/offers", offer_data, headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ Personal offer created successfully")
+            else:
+                logger.error(f"❌ Personal offer creation failed: {result}")
+                success = False
+        
+        return success
+
+    async def test_additional_services(self) -> bool:
+        """Test additional services (insurance, loans, leasing)"""
+        logger.info("🏦 Testing Additional Services...")
+        
+        if "buyer" not in self.auth_tokens or not self.test_data.get("cars"):
+            logger.error("❌ Missing buyer token or cars for services testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        car_id = self.test_data["cars"][0]["id"]
+        
+        # Test insurance quote
+        insurance_data = aiohttp.FormData()
+        insurance_data.add_field("car_id", car_id)
+        insurance_data.add_field("insurance_type", "KASKO")
+        insurance_data.add_field("coverage_amount", "5500000")
+        
+        result = await self.make_request("POST", "/services/insurance/quote", files=insurance_data, headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Insurance quote generated successfully")
+            logger.info(f"Quote details: {result['data']['yearly_premium']} RUB/year")
+        else:
+            logger.error(f"❌ Insurance quote failed: {result}")
+            success = False
+        
+        # Get insurance quotes
+        result = await self.make_request("GET", "/services/insurance/quotes", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} insurance quotes")
+        else:
+            logger.error(f"❌ Failed to get insurance quotes: {result}")
+            success = False
+        
+        # Test loan application
+        loan_data = {
+            "car_id": car_id,
+            "loan_amount": 4000000.0,
+            "monthly_income": 150000.0,
+            "employment_status": "Постоянная работа",
+            "loan_term_months": 60
+        }
+        
+        result = await self.make_request("POST", "/services/loans/apply", loan_data, headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Loan application submitted successfully")
+            if result["data"]["status"] == "approved":
+                logger.info(f"Loan approved: {result['data']['monthly_payment']} RUB/month")
+        else:
+            logger.error(f"❌ Loan application failed: {result}")
+            success = False
+        
+        # Get loan applications
+        result = await self.make_request("GET", "/services/loans/applications", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} loan applications")
+        else:
+            logger.error(f"❌ Failed to get loan applications: {result}")
+            success = False
+        
+        # Test leasing application
+        lease_data = {
+            "car_id": car_id,
+            "lease_term_months": 36
+        }
+        
+        result = await self.make_request("POST", "/services/leasing/apply", lease_data, headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Leasing application submitted successfully")
+            logger.info(f"Monthly payment: {result['data']['monthly_payment']} RUB")
+        else:
+            logger.error(f"❌ Leasing application failed: {result}")
+            success = False
+        
+        # Get leasing applications
+        result = await self.make_request("GET", "/services/leasing/applications", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} leasing applications")
+        else:
+            logger.error(f"❌ Failed to get leasing applications: {result}")
+            success = False
+        
+        return success
+
+    async def test_admin_panel(self) -> bool:
+        """Test admin panel functionality"""
+        logger.info("👑 Testing Admin Panel...")
+        
+        # Create admin user first
+        admin_data = {
+            "email": f"admin_{uuid.uuid4().hex[:8]}@velesdrive.com",
+            "password": "AdminPass123!",
+            "full_name": "Администратор Системы",
+            "phone": "+7-900-000-0000",
+            "role": "admin"
+        }
+        
+        result = await self.make_request("POST", "/auth/register", admin_data)
+        
+        if result["status"] == 200:
+            logger.info("✅ Admin user created successfully")
+            self.auth_tokens["admin"] = result["data"]["access_token"]
+        else:
+            logger.error(f"❌ Admin user creation failed: {result}")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("admin")
+        
+        # Get platform statistics
+        result = await self.make_request("GET", "/admin/stats", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Platform statistics retrieved")
+            stats = result["data"]
+            logger.info(f"Total users: {stats['overview']['total_users']}")
+            logger.info(f"Total cars: {stats['overview']['total_cars']}")
+        else:
+            logger.error(f"❌ Failed to get platform stats: {result}")
+            success = False
+        
+        # Get all users
+        result = await self.make_request("GET", "/admin/users", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ Retrieved {len(result['data'])} users for management")
+        else:
+            logger.error(f"❌ Failed to get users list: {result}")
+            success = False
+        
+        # Test user status update
+        if "buyer" in self.test_users:
+            buyer_email = self.test_users["buyer"]["email"]
+            # Find buyer user ID from users list
+            users_result = await self.make_request("GET", "/admin/users", headers=headers)
+            if users_result["status"] == 200:
+                buyer_user = next((u for u in users_result["data"] if u["email"] == buyer_email), None)
+                if buyer_user:
+                    user_id = buyer_user["id"]
+                    
+                    # Deactivate user
+                    status_data = aiohttp.FormData()
+                    status_data.add_field("is_active", "false")
+                    
+                    result = await self.make_request("PUT", f"/admin/users/{user_id}/status", 
+                                                   files=status_data, headers=headers)
+                    
+                    if result["status"] == 200:
+                        logger.info("✅ User deactivated successfully")
+                        
+                        # Reactivate user
+                        status_data = aiohttp.FormData()
+                        status_data.add_field("is_active", "true")
+                        
+                        result = await self.make_request("PUT", f"/admin/users/{user_id}/status", 
+                                                       files=status_data, headers=headers)
+                        
+                        if result["status"] == 200:
+                            logger.info("✅ User reactivated successfully")
+                        else:
+                            logger.error(f"❌ User reactivation failed: {result}")
+                            success = False
+                    else:
+                        logger.error(f"❌ User deactivation failed: {result}")
+                        success = False
+        
+        # Get pending content for moderation
+        result = await self.make_request("GET", "/admin/content/pending", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Pending content retrieved for moderation")
+            content = result["data"]
+            logger.info(f"Pending cars: {len(content['pending_cars'])}")
+            logger.info(f"Recent reviews: {len(content['recent_reviews'])}")
+        else:
+            logger.error(f"❌ Failed to get pending content: {result}")
+            success = False
+        
+        # Test car approval
+        if self.test_data.get("cars"):
+            car_id = self.test_data["cars"][0]["id"]
+            result = await self.make_request("POST", f"/admin/cars/{car_id}/approve", headers=headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ Car approved successfully")
+            else:
+                logger.error(f"❌ Car approval failed: {result}")
+                success = False
+        
+        # Test review deletion (if we have reviews)
+        if self.test_data.get("review_id"):
+            review_id = self.test_data["review_id"]
+            result = await self.make_request("DELETE", f"/admin/reviews/{review_id}", headers=headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ Review deleted successfully")
+            else:
+                logger.error(f"❌ Review deletion failed: {result}")
+                success = False
+        
+        # Get sales report
+        result = await self.make_request("GET", "/admin/reports/sales", headers=headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Sales report generated successfully")
+            report = result["data"]
+            logger.info(f"Total sales: {report['metrics']['total_sales']}")
+            logger.info(f"Total revenue: {report['metrics']['total_revenue']} RUB")
+        else:
+            logger.error(f"❌ Sales report generation failed: {result}")
+            success = False
+        
+        return success
+
+    async def test_vehicle_types_system(self) -> bool:
+        """Test extended vehicle support (cars, motorcycles, boats, planes)"""
+        logger.info("🚁 Testing Vehicle Types System...")
+        
+        if "dealer" not in self.auth_tokens:
+            logger.error("❌ No dealer token available for vehicle types testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("dealer")
+        
+        # Create different vehicle types
+        vehicles_data = [
+            {
+                "vehicle_type": "motorcycle",
+                "brand": "Harley-Davidson",
+                "model": "Street Glide",
+                "year": 2023,
+                "price": 2500000.0,
+                "engine_power": 114,
+                "color": "Черный",
+                "description": "Легендарный американский мотоцикл",
+                "features": ["ABS", "Круиз-контроль", "Подогрев рукояток"]
+            },
+            {
+                "vehicle_type": "boat",
+                "brand": "Sea Ray",
+                "model": "Sundancer 320",
+                "year": 2022,
+                "price": 15000000.0,
+                "boat_length": 9.8,
+                "hours_operated": 150,
+                "color": "Белый",
+                "description": "Роскошная моторная яхта",
+                "features": ["GPS навигация", "Автопилот", "Кондиционер"]
+            }
+        ]
+        
+        created_vehicles = []
+        
+        for vehicle_data in vehicles_data:
+            result = await self.make_request("POST", "/cars", vehicle_data, headers)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ {vehicle_data['vehicle_type'].title()} created: {vehicle_data['brand']} {vehicle_data['model']}")
+                created_vehicles.append(result["data"])
+            else:
+                logger.error(f"❌ {vehicle_data['vehicle_type'].title()} creation failed: {result}")
+                success = False
+        
+        # Test getting vehicles by type
+        for vehicle_type in ["car", "motorcycle", "boat"]:
+            result = await self.make_request("GET", f"/vehicles/{vehicle_type}")
+            
+            if result["status"] == 200:
+                logger.info(f"✅ Retrieved {len(result['data'])} {vehicle_type}s")
+            else:
+                logger.error(f"❌ Failed to get {vehicle_type}s: {result}")
+                success = False
+        
+        # Get vehicle statistics
+        result = await self.make_request("GET", "/vehicles/stats")
+        
+        if result["status"] == 200:
+            logger.info("✅ Vehicle statistics retrieved")
+            stats = result["data"]
+            for vehicle_type, data in stats.items():
+                logger.info(f"{vehicle_type.title()}s: {data['count']} available, avg price: {data['price_range']['average']:.0f} RUB")
+        else:
+            logger.error(f"❌ Failed to get vehicle stats: {result}")
+            success = False
+        
+        return success
     
     async def run_all_tests(self) -> Dict[str, bool]:
         """Run all API tests"""
