@@ -2027,5 +2027,97 @@ async def main():
         logger.error(f"❌ Testing failed with error: {str(e)}")
         sys.exit(1)
 
+async def main_ai_tests():
+    """Main AI test runner - specifically for testing AI functions"""
+    try:
+        async with VelesDriveAPITester() as tester:
+            logger.info("🤖 Starting VELES DRIVE AI Functions Testing")
+            logger.info(f"Testing API at: {tester.base_url}")
+            logger.info("\n🎯 TESTING SCOPE:")
+            logger.info("1. AI Рекомендации - /api/ai/recommendations")
+            logger.info("2. AI Поиск - /api/ai/search")
+            logger.info("3. AI Чат-ассистент - /api/ai/chat")
+            logger.info("4. AI Улучшение описаний - /api/ai/enhance-description/{car_id}")
+            logger.info("5. AI Аналитика - /api/ai/market-insights")
+            logger.info("\n👥 TEST USERS:")
+            logger.info("- buyer@test.com / testpass123")
+            logger.info("- dealer@test.com / testpass123")
+            logger.info("- admin@test.com / testpass123")
+            
+            # Run AI-specific tests
+            test_results = await tester.run_ai_tests_only()
+            
+            # Print summary
+            logger.info(f"\n{'='*60}")
+            logger.info("AI FUNCTIONS TEST RESULTS SUMMARY")
+            logger.info(f"{'='*60}")
+            
+            # Separate setup tests from AI tests
+            setup_tests = ["Basic Connectivity", "Test Users Creation", "Dealer Setup", "Cars Setup"]
+            ai_tests = [k for k in test_results.keys() if k not in setup_tests]
+            
+            # Print setup results
+            logger.info("\n🔧 SETUP TESTS:")
+            setup_passed = 0
+            for test_name in setup_tests:
+                if test_name in test_results:
+                    status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+                    logger.info(f"  {test_name:<25} {status}")
+                    if test_results[test_name]:
+                        setup_passed += 1
+            
+            # Print AI test results
+            logger.info("\n🤖 AI FUNCTION TESTS:")
+            ai_passed = 0
+            for test_name in ai_tests:
+                status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+                logger.info(f"  {test_name:<25} {status}")
+                if test_results[test_name]:
+                    ai_passed += 1
+            
+            total_tests = len(test_results)
+            total_passed = sum(1 for result in test_results.values() if result)
+            
+            logger.info(f"\n📊 Overall Results: {total_passed}/{total_tests} tests passed")
+            logger.info(f"   Setup Tests: {setup_passed}/{len(setup_tests)} passed")
+            logger.info(f"   AI Tests: {ai_passed}/{len(ai_tests)} passed")
+            
+            # Detailed AI testing summary
+            if ai_passed == len(ai_tests):
+                logger.info("\n🎉 ALL AI FUNCTIONS WORKING CORRECTLY!")
+                logger.info("✅ AI Recommendations: Personalized car suggestions working")
+                logger.info("✅ AI Search: Natural language search functioning")
+                logger.info("✅ AI Chat Assistant: Customer support bot operational")
+                logger.info("✅ AI Description Enhancement: Auto-generated descriptions working")
+                logger.info("✅ AI Market Insights: Analytics and trends generation working")
+                logger.info("\n🔑 KEY FINDINGS:")
+                logger.info("- Emergent LLM integration is functional")
+                logger.info("- Fallback mechanisms work when AI is unavailable")
+                logger.info("- Permission controls properly implemented")
+                logger.info("- All AI endpoints respond correctly")
+                sys.exit(0)
+            else:
+                failed_ai_tests = [test for test in ai_tests if not test_results.get(test, False)]
+                logger.error(f"\n❌ {len(failed_ai_tests)} AI function(s) failed:")
+                for failed_test in failed_ai_tests:
+                    logger.error(f"   - {failed_test}")
+                logger.error("\n🔍 POSSIBLE ISSUES:")
+                logger.error("- Emergent LLM API key may be invalid or expired")
+                logger.error("- Network connectivity issues with AI service")
+                logger.error("- Backend AI service configuration problems")
+                logger.error("- Permission or authentication issues")
+                sys.exit(1)
+                
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  AI testing interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ AI testing failed with error: {str(e)}")
+        sys.exit(1)
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Check if we should run AI tests specifically
+    if len(sys.argv) > 1 and sys.argv[1] == "ai":
+        asyncio.run(main_ai_tests())
+    else:
+        asyncio.run(main())
