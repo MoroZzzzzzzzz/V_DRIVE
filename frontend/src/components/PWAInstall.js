@@ -165,7 +165,7 @@ const PWAInstall = () => {
           
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="flex items-center gap-1 text-gray-400">
-              <Offline size={12} />
+              <WifiOff size={12} />
               Офлайн режим
             </div>
             <div className="flex items-center gap-1 text-gray-400">
