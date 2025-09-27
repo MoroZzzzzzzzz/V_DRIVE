@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 from enum import Enum
 import jwt
 from passlib.context import CryptContext
+from integrations import notification_service
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
