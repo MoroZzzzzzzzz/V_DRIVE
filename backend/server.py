@@ -592,6 +592,39 @@ async def place_bid(auction_id: str, bid_data: BidCreate, current_user: User = D
         {"$set": {"current_price": bid_data.amount}}
     )
     
+    # Notify other bidders about new bid
+    try:
+        # Get car details
+        car_data = await db.cars.find_one({"id": auction.car_id})
+        
+        # Get users who have bid on this auction (excluding current bidder)
+        previous_bids = await db.bids.find({"auction_id": auction_id, "user_id": {"$ne": current_user.id}}).to_list(length=None)
+        unique_bidder_ids = list(set([b["user_id"] for b in previous_bids]))
+        
+        # Get user details for notifications
+        users_to_notify = []
+        for user_id in unique_bidder_ids:
+            user_data = await db.users.find_one({"id": user_id})
+            if user_data:
+                users_to_notify.append({
+                    "email": user_data["email"],
+                    "telegram_chat_id": user_data.get("telegram_chat_id")
+                })
+        
+        if car_data and users_to_notify:
+            car_details = {
+                "id": car_data["id"],
+                "brand": car_data["brand"],
+                "model": car_data["model"],
+                "year": car_data["year"],
+                "current_price": bid_data.amount
+            }
+            
+            await notification_service.notify_new_bid(auction_id, car_details, users_to_notify)
+            
+    except Exception as e:
+        logger.error(f"Failed to send bid notifications: {e}")
+    
     return bid
 
 # Projects (Trello-style) routes
