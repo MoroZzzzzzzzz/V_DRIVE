@@ -20,6 +20,7 @@ const Header = () => {
   const navigationItems = [
     { path: '/', label: 'Главная', icon: 'fas fa-home' },
     { path: '/catalog', label: 'Каталог', icon: 'fas fa-car' },
+    { path: '/premium', label: 'Премиум', icon: 'fas fa-crown' },
     { path: '/dealers', label: 'Дилеры', icon: 'fas fa-store' },
   ];
 
