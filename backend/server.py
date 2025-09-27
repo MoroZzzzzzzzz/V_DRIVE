@@ -1310,6 +1310,229 @@ async def get_lease_applications(current_user: User = Depends(get_current_user))
     applications = await db.lease_applications.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
     return [LeaseApplication(**app) for app in applications]
 
+# Admin panel routes
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: User = Depends(get_current_user)):
+    """Get platform statistics for admins"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access statistics")
+    
+    # Collect various statistics
+    total_users = await db.users.count_documents({})
+    total_dealers = await db.dealers.count_documents({})
+    total_cars = await db.cars.count_documents({})
+    active_auctions = await db.auctions.count_documents({"status": "active"})
+    total_reviews = await db.reviews.count_documents({})
+    total_transactions = await db.transactions.count_documents({})
+    
+    # Recent activity
+    recent_users = await db.users.count_documents({
+        "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+    })
+    
+    recent_sales = await db.sales.count_documents({
+        "sale_date": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+    })
+    
+    # Calculate revenue (mock calculation)
+    sales = await db.sales.find({
+        "sale_date": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+    }).to_list(length=None)
+    
+    monthly_revenue = sum([sale.get("commission", sale["sale_price"] * 0.05) for sale in sales])
+    
+    return {
+        "overview": {
+            "total_users": total_users,
+            "total_dealers": total_dealers,
+            "total_cars": total_cars,
+            "active_auctions": active_auctions,
+            "total_reviews": total_reviews,
+            "total_transactions": total_transactions
+        },
+        "monthly_stats": {
+            "new_users": recent_users,
+            "sales_count": recent_sales,
+            "revenue": monthly_revenue
+        }
+    }
+
+@api_router.get("/admin/users", response_model=List[User])
+async def get_all_users(
+    current_user: User = Depends(get_current_user),
+    role: Optional[str] = None,
+    limit: int = Query(50, le=200)
+):
+    """Get all platform users for admin management"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can manage users")
+    
+    filter_query = {}
+    if role:
+        filter_query["role"] = role
+    
+    users = await db.users.find(filter_query).sort("created_at", -1).limit(limit).to_list(length=None)
+    return [User(**user) for user in users]
+
+@api_router.put("/admin/users/{user_id}/status")
+async def update_user_status(
+    user_id: str,
+    is_active: bool = Form(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Activate/deactivate user account"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can manage users")
+    
+    result = await db.users.update_one({"id": user_id}, {"$set": {"is_active": is_active}})
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    action = "activated" if is_active else "deactivated"
+    return {"message": f"User {action} successfully"}
+
+@api_router.get("/admin/content/pending")
+async def get_pending_content(current_user: User = Depends(get_current_user)):
+    """Get content requiring moderation"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can moderate content")
+    
+    # Cars awaiting approval (mock - add moderation status to Car model later)
+    recent_cars = await db.cars.find({
+        "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=7)}
+    }).sort("created_at", -1).limit(20).to_list(length=None)
+    
+    # Recent reviews
+    recent_reviews = await db.reviews.find({}).sort("created_at", -1).limit(10).to_list(length=None)
+    
+    # Recent dealer registrations
+    recent_dealers = await db.dealers.find({
+        "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=7)}
+    }).sort("created_at", -1).to_list(length=None)
+    
+    return {
+        "pending_cars": [Car(**car) for car in recent_cars],
+        "recent_reviews": [Review(**review) for review in recent_reviews],
+        "pending_dealers": [Dealer(**dealer) for dealer in recent_dealers]
+    }
+
+@api_router.post("/admin/cars/{car_id}/approve")
+async def approve_car(car_id: str, current_user: User = Depends(get_current_user)):
+    """Approve car listing"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can approve content")
+    
+    result = await db.cars.update_one(
+        {"id": car_id}, 
+        {"$set": {"approved": True, "approved_at": datetime.now(timezone.utc), "approved_by": current_user.id}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    return {"message": "Car approved successfully"}
+
+@api_router.delete("/admin/reviews/{review_id}")
+async def delete_review(review_id: str, current_user: User = Depends(get_current_user)):
+    """Delete inappropriate review"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can moderate reviews")
+    
+    review_data = await db.reviews.find_one({"id": review_id})
+    if not review_data:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Delete review
+    await db.reviews.delete_one({"id": review_id})
+    
+    # Update dealer rating
+    dealer_id = review_data["dealer_id"]
+    reviews = await db.reviews.find({"dealer_id": dealer_id}).to_list(length=None)
+    
+    if reviews:
+        avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
+        await db.dealers.update_one(
+            {"id": dealer_id},
+            {"$set": {"rating": avg_rating, "reviews_count": len(reviews)}}
+        )
+    else:
+        await db.dealers.update_one(
+            {"id": dealer_id},
+            {"$set": {"rating": 0.0, "reviews_count": 0}}
+        )
+    
+    return {"message": "Review deleted successfully"}
+
+@api_router.get("/admin/reports/sales")
+async def get_sales_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate sales report for admins"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access reports")
+    
+    # Default to last 30 days if no dates provided
+    end_dt = datetime.now(timezone.utc)
+    start_dt = end_dt - timedelta(days=30)
+    
+    if start_date:
+        start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    if end_date:
+        end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    
+    # Get sales in date range
+    sales = await db.sales.find({
+        "sale_date": {"$gte": start_dt, "$lte": end_dt}
+    }).to_list(length=None)
+    
+    # Calculate metrics
+    total_sales = len(sales)
+    total_revenue = sum(sale["sale_price"] for sale in sales)
+    average_sale = total_revenue / total_sales if total_sales > 0 else 0
+    
+    # Top dealers by sales count
+    dealer_sales = {}
+    for sale in sales:
+        dealer_id = sale["dealer_id"]
+        if dealer_id not in dealer_sales:
+            dealer_sales[dealer_id] = {"count": 0, "revenue": 0}
+        dealer_sales[dealer_id]["count"] += 1
+        dealer_sales[dealer_id]["revenue"] += sale["sale_price"]
+    
+    # Get dealer names
+    top_dealers = []
+    for dealer_id, stats in sorted(dealer_sales.items(), key=lambda x: x[1]["count"], reverse=True)[:5]:
+        dealer = await db.dealers.find_one({"id": dealer_id})
+        if dealer:
+            top_dealers.append({
+                "dealer_name": dealer["company_name"],
+                "sales_count": stats["count"],
+                "revenue": stats["revenue"]
+            })
+    
+    return {
+        "period": {
+            "start_date": start_dt.isoformat(),
+            "end_date": end_dt.isoformat()
+        },
+        "metrics": {
+            "total_sales": total_sales,
+            "total_revenue": total_revenue,
+            "average_sale": average_sale
+        },
+        "top_dealers": top_dealers
+    }
+
 # Include routers
 app.include_router(api_router)
 app.include_router(payments_router)
