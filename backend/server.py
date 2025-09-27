@@ -1545,6 +1545,214 @@ async def get_sales_report(
         "top_dealers": top_dealers
     }
 
+# AI-powered endpoints
+@api_router.get("/ai/recommendations", response_model=List[Car])
+async def get_ai_recommendations(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(5, le=10)
+):
+    """Get AI-powered car recommendations for user"""
+    
+    try:
+        # Get user preferences from view history and favorites
+        view_history = await db.view_history.find({"user_id": current_user.id}).limit(20).to_list(length=None)
+        favorites = await db.favorites.find({"user_id": current_user.id}).to_list(length=None)
+        
+        # Build user preference profile
+        user_preferences = {
+            "user_id": current_user.id,
+            "viewed_cars_count": len(view_history),
+            "favorites_count": len(favorites),
+            "budget_range": "auto-detect",  # Could be enhanced with explicit user input
+            "preferred_brands": [],  # Could be derived from history
+            "lifestyle": "detect_from_behavior"  # Could be enhanced with user profile
+        }
+        
+        # Get available cars
+        cars = await db.cars.find({"status": "available"}).limit(50).to_list(length=None)
+        
+        # Get AI recommendations
+        recommended_cars = await ai_recommendation_service.get_personalized_recommendations(
+            user_preferences, cars
+        )
+        
+        return [Car(**car) for car in recommended_cars[:limit]]
+        
+    except Exception as e:
+        logger.error(f"AI recommendations error: {e}")
+        # Fallback to regular cars
+        cars = await db.cars.find({"status": "available"}).limit(limit).to_list(length=None)
+        return [Car(**car) for car in cars]
+
+@api_router.post("/ai/search")
+async def ai_powered_search(
+    query: str = Form(...),
+    limit: int = Query(20, le=50)
+):
+    """Natural language search for cars using AI"""
+    
+    try:
+        # Get available cars
+        cars = await db.cars.find({"status": "available"}).to_list(length=None)
+        
+        # Process with AI
+        matching_cars = await process_natural_language_search(query, cars)
+        
+        return {
+            "query": query,
+            "results": [Car(**car) for car in matching_cars[:limit]],
+            "total_found": len(matching_cars),
+            "search_type": "ai_natural_language"
+        }
+        
+    except Exception as e:
+        logger.error(f"AI search error: {e}")
+        # Fallback to regular search
+        cars = await db.cars.find({
+            "$or": [
+                {"brand": {"$regex": query, "$options": "i"}},
+                {"model": {"$regex": query, "$options": "i"}},
+                {"description": {"$regex": query, "$options": "i"}}
+            ]
+        }).limit(limit).to_list(length=None)
+        
+        return {
+            "query": query,
+            "results": [Car(**car) for car in cars],
+            "total_found": len(cars),
+            "search_type": "fallback_text"
+        }
+
+@api_router.post("/ai/chat")
+async def chat_with_assistant(
+    message: str = Form(...),
+    session_id: Optional[str] = Form(None),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """Chat with AI virtual assistant"""
+    
+    try:
+        # Prepare context
+        context = {}
+        if current_user:
+            context["user_role"] = current_user.role
+            context["user_id"] = current_user.id
+        
+        # Get AI response
+        ai_response = await ai_virtual_assistant.handle_customer_query(
+            query=message,
+            context=context,
+            session_id=session_id
+        )
+        
+        # Store chat history if user is logged in
+        if current_user:
+            chat_message = ChatMessage(
+                session_id=ai_response["session_id"],
+                user_id=current_user.id,
+                message=message,
+                response=ai_response["response"]
+            )
+            await db.chat_history.insert_one(chat_message)
+        
+        return ai_response
+        
+    except Exception as e:
+        logger.error(f"AI chat error: {e}")
+        return {
+            "response": "Извините, произошла ошибка. Попробуйте позже или обратитесь к менеджеру.",
+            "type": "error",
+            "suggested_actions": ["Связаться с поддержкой"],
+            "needs_human": True,
+            "session_id": session_id or f"error_{uuid.uuid4()}"
+        }
+
+@api_router.get("/ai/chat/history")
+async def get_chat_history(
+    session_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(20, le=100)
+):
+    """Get user's chat history"""
+    
+    filter_query = {"user_id": current_user.id}
+    if session_id:
+        filter_query["session_id"] = session_id
+    
+    chat_history = await db.chat_history.find(filter_query).sort("timestamp", -1).limit(limit).to_list(length=None)
+    return chat_history
+
+@api_router.post("/ai/enhance-description/{car_id}")
+async def enhance_car_description(
+    car_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate AI-enhanced description for a car"""
+    
+    if current_user.role not in [UserRole.DEALER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only dealers can enhance descriptions")
+    
+    # Get car data
+    car_data = await db.cars.find_one({"id": car_id})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Check permissions
+    if car_data["dealer_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only enhance your own cars")
+    
+    try:
+        # Generate AI description
+        enhanced_description = await ai_recommendation_service.generate_car_description(car_data)
+        
+        # Update car description
+        await db.cars.update_one(
+            {"id": car_id},
+            {"$set": {"ai_enhanced_description": enhanced_description}}
+        )
+        
+        return {
+            "car_id": car_id,
+            "enhanced_description": enhanced_description,
+            "original_description": car_data.get("description", "")
+        }
+        
+    except Exception as e:
+        logger.error(f"AI description enhancement error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to enhance description")
+
+@api_router.get("/ai/market-insights")
+async def get_market_insights(current_user: User = Depends(get_current_user)):
+    """Get AI-powered market insights and analytics"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access market insights")
+    
+    try:
+        # Get recent sales and cars data
+        sales_data = await db.sales.find({}).sort("sale_date", -1).limit(100).to_list(length=None)
+        cars_data = await db.cars.find({"status": "available"}).limit(100).to_list(length=None)
+        
+        # Generate AI insights
+        insights = await ai_analytics_service.generate_market_insights(sales_data, cars_data)
+        
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "data_points": {
+                "sales_analyzed": len(sales_data),
+                "cars_analyzed": len(cars_data)
+            },
+            "insights": insights
+        }
+        
+    except Exception as e:
+        logger.error(f"AI market insights error: {e}")
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "insights": {"error": "Failed to generate insights"},
+            "fallback": True
+        }
+
 # Vehicle type specific routes
 @api_router.get("/vehicles/{vehicle_type}", response_model=List[Car])
 async def get_vehicles_by_type(
