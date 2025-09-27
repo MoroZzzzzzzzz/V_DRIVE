@@ -310,6 +310,18 @@ const CatalogPage = () => {
                         <Badge className="absolute top-4 right-4 bg-black/60 text-white border border-gray-600">
                           {car.year}
                         </Badge>
+
+                        {/* Comparison checkbox */}
+                        <div className="absolute bottom-4 left-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <Checkbox 
+                              checked={selectedForComparison.includes(car.id)}
+                              onCheckedChange={() => toggleComparison(car.id)}
+                              className="bg-white/20 border-white"
+                            />
+                            <span className="text-white text-sm">Сравнить</span>
+                          </label>
+                        </div>
                       </div>
 
                       {/* Car Info */}
