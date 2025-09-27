@@ -1188,6 +1188,421 @@ class VelesDriveAPITester:
             success = False
         
         return success
+
+    async def test_ai_recommendations_system(self) -> bool:
+        """Test AI-powered car recommendations"""
+        logger.info("🤖 Testing AI Recommendations System...")
+        
+        if "buyer" not in self.auth_tokens:
+            logger.error("❌ No buyer token available for AI recommendations testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        
+        # First, create some view history to improve recommendations
+        if self.test_data.get("cars"):
+            for car in self.test_data["cars"][:2]:
+                await self.make_request("POST", f"/cars/{car['id']}/view", headers=headers)
+            logger.info("✅ Created view history for better recommendations")
+        
+        # Test AI recommendations endpoint
+        result = await self.make_request("GET", "/ai/recommendations", headers=headers)
+        
+        if result["status"] == 200:
+            recommendations = result["data"]
+            logger.info(f"✅ AI recommendations retrieved: {len(recommendations)} cars")
+            
+            # Check if recommendations have AI-specific fields
+            if recommendations:
+                first_rec = recommendations[0]
+                if "ai_match_score" in first_rec:
+                    logger.info(f"✅ AI match score present: {first_rec['ai_match_score']}")
+                if "ai_reasons" in first_rec:
+                    logger.info(f"✅ AI reasons present: {first_rec['ai_reasons']}")
+                
+                # Log sample recommendation
+                logger.info(f"Sample recommendation: {first_rec['brand']} {first_rec['model']} - {first_rec['price']:,} ₽")
+            else:
+                logger.warning("⚠️  No recommendations returned (empty result)")
+        else:
+            logger.error(f"❌ AI recommendations failed: {result}")
+            success = False
+        
+        # Test with different limit parameter
+        result = await self.make_request("GET", "/ai/recommendations", {"limit": 3}, headers)
+        
+        if result["status"] == 200:
+            logger.info(f"✅ AI recommendations with limit work: {len(result['data'])} cars")
+        else:
+            logger.error(f"❌ AI recommendations with limit failed: {result}")
+            success = False
+        
+        return success
+
+    async def test_ai_search_system(self) -> bool:
+        """Test AI-powered natural language search"""
+        logger.info("🔍 Testing AI Search System...")
+        
+        success = True
+        
+        # Test various natural language queries
+        test_queries = [
+            "семейный автомобиль до 2 млн",
+            "спортивная машина красного цвета", 
+            "экономичный автомобиль для города",
+            "премиум внедорожник",
+            "BMW или Mercedes до 5 миллионов"
+        ]
+        
+        for query in test_queries:
+            logger.info(f"Testing search query: '{query}'")
+            
+            # Use form data for the search
+            form_data = aiohttp.FormData()
+            form_data.add_field("query", query)
+            
+            result = await self.make_request("POST", "/ai/search", files=form_data)
+            
+            if result["status"] == 200:
+                search_result = result["data"]
+                logger.info(f"✅ AI search successful for '{query}'")
+                logger.info(f"   Found: {search_result['total_found']} cars")
+                logger.info(f"   Search type: {search_result['search_type']}")
+                
+                # Check if we got results
+                if search_result["results"]:
+                    sample_car = search_result["results"][0]
+                    logger.info(f"   Sample result: {sample_car['brand']} {sample_car['model']}")
+                else:
+                    logger.warning(f"⚠️  No results for query: '{query}'")
+            else:
+                logger.error(f"❌ AI search failed for '{query}': {result}")
+                success = False
+        
+        # Test search with limit parameter
+        form_data = aiohttp.FormData()
+        form_data.add_field("query", "любой автомобиль")
+        
+        result = await self.make_request("POST", "/ai/search", files=form_data, headers={"limit": "5"})
+        
+        if result["status"] == 200:
+            logger.info("✅ AI search with limit parameter works")
+        else:
+            logger.error(f"❌ AI search with limit failed: {result}")
+            success = False
+        
+        return success
+
+    async def test_ai_chat_assistant(self) -> bool:
+        """Test AI chat assistant functionality"""
+        logger.info("💬 Testing AI Chat Assistant...")
+        
+        success = True
+        
+        # Test various types of questions
+        test_questions = [
+            "Как купить автомобиль на вашей платформе?",
+            "Какие документы нужны для продажи машины?",
+            "Расскажите о страховании автомобилей",
+            "Помогите выбрать кредит на покупку BMW",
+            "Как работает система аукционов?"
+        ]
+        
+        session_id = f"test_session_{uuid.uuid4()}"
+        
+        # Test without authentication first
+        for question in test_questions:
+            logger.info(f"Testing chat question: '{question}'")
+            
+            form_data = aiohttp.FormData()
+            form_data.add_field("message", question)
+            form_data.add_field("session_id", session_id)
+            
+            result = await self.make_request("POST", "/ai/chat", files=form_data)
+            
+            if result["status"] == 200:
+                chat_response = result["data"]
+                logger.info(f"✅ AI chat response received")
+                logger.info(f"   Response type: {chat_response.get('type', 'unknown')}")
+                logger.info(f"   Needs human: {chat_response.get('needs_human', False)}")
+                logger.info(f"   Suggested actions: {len(chat_response.get('suggested_actions', []))}")
+                logger.info(f"   Response preview: {chat_response.get('response', '')[:100]}...")
+                
+                # Verify required fields
+                if "response" not in chat_response:
+                    logger.error("❌ Missing 'response' field in chat response")
+                    success = False
+                if "session_id" not in chat_response:
+                    logger.error("❌ Missing 'session_id' field in chat response")
+                    success = False
+            else:
+                logger.error(f"❌ AI chat failed for '{question}': {result}")
+                success = False
+        
+        # Test with authenticated user
+        if "buyer" in self.auth_tokens:
+            logger.info("Testing chat with authenticated buyer...")
+            headers = self.get_auth_headers("buyer")
+            
+            form_data = aiohttp.FormData()
+            form_data.add_field("message", "Покажите мои избранные автомобили")
+            form_data.add_field("session_id", session_id)
+            
+            result = await self.make_request("POST", "/ai/chat", files=form_data, headers=headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ AI chat with authentication works")
+            else:
+                logger.error(f"❌ AI chat with authentication failed: {result}")
+                success = False
+        
+        # Test chat history retrieval
+        if "buyer" in self.auth_tokens:
+            headers = self.get_auth_headers("buyer")
+            result = await self.make_request("GET", "/ai/chat/history", {"session_id": session_id}, headers)
+            
+            if result["status"] == 200:
+                history = result["data"]
+                logger.info(f"✅ Chat history retrieved: {len(history)} messages")
+            else:
+                logger.error(f"❌ Chat history retrieval failed: {result}")
+                success = False
+        
+        return success
+
+    async def test_ai_description_enhancement(self) -> bool:
+        """Test AI-powered description enhancement for dealers"""
+        logger.info("✨ Testing AI Description Enhancement...")
+        
+        if "dealer" not in self.auth_tokens or not self.test_data.get("cars"):
+            logger.error("❌ Missing dealer token or cars for description enhancement testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("dealer")
+        
+        # Test enhancing description for dealer's own car
+        car_id = self.test_data["cars"][0]["id"]
+        
+        result = await self.make_request("POST", f"/ai/enhance-description/{car_id}", headers=headers)
+        
+        if result["status"] == 200:
+            enhanced_data = result["data"]
+            logger.info("✅ AI description enhancement successful")
+            logger.info(f"   Original description: {enhanced_data.get('original_description', 'N/A')[:100]}...")
+            logger.info(f"   Enhanced description: {enhanced_data.get('enhanced_description', 'N/A')[:100]}...")
+            
+            # Verify the car was updated
+            car_check = await self.make_request("GET", f"/cars/{car_id}")
+            if car_check["status"] == 200:
+                updated_car = car_check["data"]
+                if updated_car["description"] != enhanced_data.get("original_description"):
+                    logger.info("✅ Car description was updated in database")
+                else:
+                    logger.warning("⚠️  Car description was not updated in database")
+        else:
+            logger.error(f"❌ AI description enhancement failed: {result}")
+            success = False
+        
+        # Test with non-existent car (should fail)
+        fake_car_id = str(uuid.uuid4())
+        result = await self.make_request("POST", f"/ai/enhance-description/{fake_car_id}", headers=headers)
+        
+        if result["status"] == 404:
+            logger.info("✅ Properly handles non-existent car")
+        else:
+            logger.error(f"❌ Should return 404 for non-existent car: {result}")
+            success = False
+        
+        # Test with buyer token (should fail - only dealers allowed)
+        if "buyer" in self.auth_tokens:
+            buyer_headers = self.get_auth_headers("buyer")
+            result = await self.make_request("POST", f"/ai/enhance-description/{car_id}", headers=buyer_headers)
+            
+            if result["status"] == 403:
+                logger.info("✅ Properly blocks non-dealer users")
+            else:
+                logger.error(f"❌ Should block non-dealer users: {result}")
+                success = False
+        
+        return success
+
+    async def test_ai_market_insights(self) -> bool:
+        """Test AI-powered market insights for admins"""
+        logger.info("📊 Testing AI Market Insights...")
+        
+        if "admin" not in self.auth_tokens:
+            logger.error("❌ No admin token available for market insights testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("admin")
+        
+        # Test market insights endpoint
+        result = await self.make_request("GET", "/ai/market-insights", headers=headers)
+        
+        if result["status"] == 200:
+            insights = result["data"]
+            logger.info("✅ AI market insights retrieved successfully")
+            
+            # Check for expected insight fields
+            expected_fields = ["key_trends", "popular_segments", "price_insights", "dealer_recommendations"]
+            for field in expected_fields:
+                if field in insights:
+                    logger.info(f"✅ Found insight field: {field}")
+                    
+                    # Log sample data
+                    if field == "key_trends" and insights[field]:
+                        logger.info(f"   Sample trend: {insights[field][0]}")
+                    elif field == "price_insights":
+                        price_info = insights[field]
+                        if isinstance(price_info, dict) and "trend" in price_info:
+                            logger.info(f"   Price trend: {price_info['trend']}")
+                else:
+                    logger.warning(f"⚠️  Missing expected insight field: {field}")
+            
+            # Log general insights structure
+            logger.info(f"   Total insight fields: {len(insights)}")
+            
+        else:
+            logger.error(f"❌ AI market insights failed: {result}")
+            success = False
+        
+        # Test with non-admin user (should fail)
+        if "buyer" in self.auth_tokens:
+            buyer_headers = self.get_auth_headers("buyer")
+            result = await self.make_request("GET", "/ai/market-insights", headers=buyer_headers)
+            
+            if result["status"] == 403:
+                logger.info("✅ Properly blocks non-admin users from market insights")
+            else:
+                logger.error(f"❌ Should block non-admin users: {result}")
+                success = False
+        
+        return success
+
+    async def test_ai_system_comprehensive(self) -> bool:
+        """Comprehensive test of all AI functions with specific test users"""
+        logger.info("🧠 Testing AI System Comprehensively with Test Users...")
+        
+        # First, ensure we have the specific test users
+        await self.create_specific_test_users()
+        
+        success = True
+        test_results = {}
+        
+        # Test each AI function
+        ai_tests = [
+            ("AI Recommendations", self.test_ai_recommendations_system),
+            ("AI Search", self.test_ai_search_system),
+            ("AI Chat Assistant", self.test_ai_chat_assistant),
+            ("AI Description Enhancement", self.test_ai_description_enhancement),
+            ("AI Market Insights", self.test_ai_market_insights)
+        ]
+        
+        for test_name, test_func in ai_tests:
+            logger.info(f"\n--- Running {test_name} ---")
+            try:
+                result = await test_func()
+                test_results[test_name] = result
+                if result:
+                    logger.info(f"✅ {test_name}: PASSED")
+                else:
+                    logger.error(f"❌ {test_name}: FAILED")
+                    success = False
+            except Exception as e:
+                logger.error(f"❌ {test_name}: ERROR - {str(e)}")
+                test_results[test_name] = False
+                success = False
+        
+        # Summary
+        logger.info(f"\n{'='*60}")
+        logger.info("AI SYSTEM TEST RESULTS SUMMARY")
+        logger.info(f"{'='*60}")
+        
+        passed = sum(1 for result in test_results.values() if result)
+        total = len(test_results)
+        
+        for test_name, result in test_results.items():
+            status = "✅ PASSED" if result else "❌ FAILED"
+            logger.info(f"{test_name:<30} {status}")
+        
+        logger.info(f"\n📊 AI Tests Results: {passed}/{total} tests passed")
+        
+        if passed == total:
+            logger.info("🎉 All AI tests passed! VELES DRIVE AI system is working correctly.")
+        else:
+            logger.warning(f"⚠️  {total - passed} AI test(s) failed. Check logs for details.")
+        
+        return success
+
+    async def create_specific_test_users(self) -> bool:
+        """Create the specific test users required for AI testing"""
+        logger.info("👤 Creating Specific Test Users for AI Testing...")
+        
+        # Specific test users as requested
+        test_users = [
+            {
+                "email": "buyer@test.com",
+                "password": "testpass123",
+                "full_name": "Test Buyer",
+                "phone": "+7-900-123-4567",
+                "role": "buyer"
+            },
+            {
+                "email": "dealer@test.com", 
+                "password": "testpass123",
+                "full_name": "Test Dealer",
+                "phone": "+7-900-765-4321",
+                "role": "dealer",
+                "company_name": "Test Auto Dealer"
+            },
+            {
+                "email": "admin@test.com",
+                "password": "testpass123", 
+                "full_name": "Test Admin",
+                "phone": "+7-900-555-0000",
+                "role": "admin"
+            }
+        ]
+        
+        success = True
+        
+        for user_data in test_users:
+            role = user_data['role']
+            
+            # Try to register (might already exist)
+            result = await self.make_request("POST", "/auth/register", user_data)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ {role.title()} user created: {user_data['email']}")
+                self.auth_tokens[role] = result["data"]["access_token"]
+            elif result["status"] == 400 and "already registered" in result["data"]["detail"]:
+                logger.info(f"ℹ️  {role.title()} user already exists, logging in...")
+                
+                # Login with existing user
+                login_data = {
+                    "email": user_data["email"],
+                    "password": user_data["password"]
+                }
+                
+                login_result = await self.make_request("POST", "/auth/login", login_data)
+                
+                if login_result["status"] == 200:
+                    logger.info(f"✅ {role.title()} login successful")
+                    self.auth_tokens[role] = login_result["data"]["access_token"]
+                else:
+                    logger.error(f"❌ {role.title()} login failed: {login_result}")
+                    success = False
+            else:
+                logger.error(f"❌ {role.title()} user creation failed: {result}")
+                success = False
+        
+        # Store user data for later use
+        self.test_users = {user['role']: user for user in test_users}
+        
+        return success
     
     async def run_all_tests(self) -> Dict[str, bool]:
         """Run all API tests"""
