@@ -51,6 +51,7 @@ const ProfilePage = () => {
     { id: 'profile', label: 'Профиль', icon: 'fas fa-user' },
     { id: 'favorites', label: 'Избранное', icon: 'fas fa-heart', count: favorites.length },
     { id: 'history', label: 'История', icon: 'fas fa-history' },
+    { id: 'telegram', label: 'Telegram', icon: 'fab fa-telegram' },
     { id: 'settings', label: 'Настройки', icon: 'fas fa-cog' }
   ];
 
