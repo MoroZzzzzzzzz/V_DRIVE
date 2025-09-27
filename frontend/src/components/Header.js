@@ -58,6 +58,17 @@ const Header = () => {
               </Link>
             ))}
             
+            {user && userNavigationItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
+              >
+                <i className={`${item.icon} mr-2`}></i>
+                {item.label}
+              </Link>
+            ))}
+            
             {user?.role === 'dealer' && (
               <Link
                 to="/erp"
