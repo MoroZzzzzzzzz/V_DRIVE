@@ -287,6 +287,39 @@ const CatalogPage = () => {
                 </div>
               </div>
 
+              {/* Comparison Panel */}
+              {selectedForComparison.length > 0 && (
+                <Card className="bg-yellow-600 text-black p-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <GitCompare size={20} />
+                      <span className="font-semibold">
+                        Выбрано для сравнения: {selectedForComparison.length} из 5
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        onClick={compareSelected}
+                        disabled={selectedForComparison.length < 2}
+                        className="bg-black text-yellow-600 hover:bg-gray-800"
+                      >
+                        <GitCompare size={16} className="mr-1" />
+                        Сравнить
+                      </Button>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={clearComparison}
+                        className="border-black text-black hover:bg-black hover:text-yellow-600"
+                      >
+                        Очистить
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {cars.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {cars.map((car) => (
