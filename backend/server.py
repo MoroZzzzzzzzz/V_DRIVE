@@ -104,6 +104,7 @@ class Car(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CarCreate(BaseModel):
+    vehicle_type: VehicleType = VehicleType.CAR
     brand: str
     model: str
     year: int
@@ -119,6 +120,10 @@ class CarCreate(BaseModel):
     features: List[str] = []
     is_premium: bool = False
     location: Optional[str] = None
+    engine_power: Optional[int] = None
+    boat_length: Optional[float] = None
+    plane_seats: Optional[int] = None
+    hours_operated: Optional[int] = None
 
 class Dealer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
