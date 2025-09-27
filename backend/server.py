@@ -1155,18 +1155,10 @@ async def create_personal_offer(offer_data: Dict[str, any], current_user: User =
     
     # Send notification to customer
     try:
-        car_details = {
-            "brand": car["brand"],
-            "model": car["model"],
-            "year": car["year"],
-            "regular_price": regular_price,
-            "offer_price": offer_price,
-            "discount_percent": discount_percent
-        }
-        
         # Email notification would go here if customer has email
         if customer.get("email"):
-            pass  # TODO: Send personal offer email
+            # TODO: Send personal offer email with car details
+            pass
             
     except Exception as e:
         logger.error(f"Failed to send offer notification: {e}")
