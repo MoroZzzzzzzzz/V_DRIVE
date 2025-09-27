@@ -39,8 +39,7 @@ class VelesDriveAPITester:
     async def __aenter__(self):
         """Async context manager entry"""
         self.session = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=TEST_TIMEOUT),
-            headers={'Content-Type': 'application/json'}
+            timeout=aiohttp.ClientTimeout(total=TEST_TIMEOUT)
         )
         return self
         
