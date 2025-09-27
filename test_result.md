@@ -188,9 +188,9 @@ VELES DRIVE - современная платформа для автомоби�
         comment: "Backend для notifications отсутствует"
 
   - task: "Telegram bot интеграция"
-    implemented: false
-    working: "NA"
-    file: "backend/server.py"
+    implemented: true
+    working: true
+    file: "backend/integrations.py"
     stuck_count: 0
     priority: "medium"
     needs_retesting: true
@@ -198,6 +198,9 @@ VELES DRIVE - современная платформа для автомоби�
       - working: "NA"
         agent: "main"
         comment: "Интеграция с Telegram API отсутствует"
+      - working: true
+        agent: "main"
+        comment: "Добавлена полная интеграция с Telegram Bot API для отправки уведомлений о новых автомобилях и обновлениях аукционов"
 
   - task: "Email уведомления"
     implemented: true
