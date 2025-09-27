@@ -76,6 +76,15 @@ class User(BaseModel):
     company_name: Optional[str] = None
     avatar_url: Optional[str] = None
     is_active: bool = True
+    # 2FA fields
+    two_fa_enabled: bool = False
+    two_fa_secret: Optional[str] = None
+    backup_codes: List[str] = []
+    last_backup_codes_generated: Optional[datetime] = None
+    # Security fields
+    last_login: Optional[datetime] = None
+    login_attempts: int = 0
+    account_locked_until: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
