@@ -1763,6 +1763,239 @@ async def get_market_insights(current_user: User = Depends(get_current_user)):
             "fallback": True
         }
 
+# Security and 2FA endpoints
+@api_router.get("/security/2fa/setup")
+async def setup_2fa(current_user: User = Depends(get_current_user)):
+    """Setup 2FA for user account"""
+    
+    if current_user.two_fa_enabled:
+        raise HTTPException(status_code=400, detail="2FA already enabled")
+    
+    try:
+        # Generate secret
+        secret = two_factor_auth.generate_secret()
+        
+        # Generate QR code
+        qr_code = two_factor_auth.generate_qr_code(current_user.email, secret)
+        
+        # Store secret temporarily (not enabled yet)
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": {"two_fa_secret": secret}}
+        )
+        
+        return {
+            "secret": secret,
+            "qr_code": qr_code,
+            "manual_entry_key": secret,
+            "instructions": "Отсканируйте QR-код или введите ключ вручную в приложение аутентификатора"
+        }
+        
+    except Exception as e:
+        logger.error(f"2FA setup error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to setup 2FA")
+
+@api_router.post("/security/2fa/verify-setup")
+async def verify_2fa_setup(
+    token: str = Form(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Verify and enable 2FA"""
+    
+    if current_user.two_fa_enabled:
+        raise HTTPException(status_code=400, detail="2FA already enabled")
+    
+    if not current_user.two_fa_secret:
+        raise HTTPException(status_code=400, detail="2FA setup not initiated")
+    
+    try:
+        # Verify token
+        if not two_factor_auth.verify_token(current_user.two_fa_secret, token):
+            raise HTTPException(status_code=400, detail="Invalid verification code")
+        
+        # Generate backup codes
+        backup_codes = two_factor_auth.generate_backup_codes()
+        
+        # Enable 2FA
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": {
+                "two_fa_enabled": True,
+                "backup_codes": backup_codes,
+                "last_backup_codes_generated": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # Log security event
+        audit_log.log_user_action(
+            user_id=current_user.id,
+            action="2fa_enabled",
+            details={"method": "authenticator_app"}
+        )
+        
+        return {
+            "message": "2FA успешно включена",
+            "backup_codes": backup_codes,
+            "warning": "Сохраните резервные коды в безопасном месте"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"2FA verification error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify 2FA")
+
+@api_router.post("/security/2fa/disable")
+async def disable_2fa(
+    password: str = Form(...),
+    token_or_backup: str = Form(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Disable 2FA with password and token/backup code"""
+    
+    if not current_user.two_fa_enabled:
+        raise HTTPException(status_code=400, detail="2FA not enabled")
+    
+    try:
+        # Verify password
+        if not pwd_context.verify(password, current_user.password_hash):
+            raise HTTPException(status_code=400, detail="Invalid password")
+        
+        # Verify token or backup code
+        is_valid = False
+        used_backup = False
+        
+        if len(token_or_backup.replace('-', '')) == 8:
+            # Backup code
+            if token_or_backup in current_user.backup_codes:
+                is_valid = True
+                used_backup = True
+        else:
+            # TOTP token
+            is_valid = two_factor_auth.verify_token(current_user.two_fa_secret, token_or_backup)
+        
+        if not is_valid:
+            raise HTTPException(status_code=400, detail="Invalid verification code")
+        
+        # Disable 2FA
+        update_data = {
+            "two_fa_enabled": False,
+            "two_fa_secret": None,
+            "backup_codes": []
+        }
+        
+        # Remove used backup code
+        if used_backup:
+            remaining_codes = [code for code in current_user.backup_codes if code != token_or_backup]
+            update_data["backup_codes"] = remaining_codes
+        
+        await db.users.update_one({"id": current_user.id}, {"$set": update_data})
+        
+        # Log security event
+        audit_log.log_user_action(
+            user_id=current_user.id,
+            action="2fa_disabled",
+            details={"method": "backup_code" if used_backup else "authenticator"}
+        )
+        
+        return {"message": "2FA отключена"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"2FA disable error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to disable 2FA")
+
+@api_router.post("/security/2fa/regenerate-backup-codes")
+async def regenerate_backup_codes(
+    password: str = Form(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Regenerate backup codes"""
+    
+    if not current_user.two_fa_enabled:
+        raise HTTPException(status_code=400, detail="2FA not enabled")
+    
+    try:
+        # Verify password
+        if not pwd_context.verify(password, current_user.password_hash):
+            raise HTTPException(status_code=400, detail="Invalid password")
+        
+        # Generate new backup codes
+        new_backup_codes = two_factor_auth.generate_backup_codes()
+        
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": {
+                "backup_codes": new_backup_codes,
+                "last_backup_codes_generated": datetime.now(timezone.utc)
+            }}
+        )
+        
+        # Log security event
+        audit_log.log_user_action(
+            user_id=current_user.id,
+            action="backup_codes_regenerated"
+        )
+        
+        return {
+            "backup_codes": new_backup_codes,
+            "message": "Новые резервные коды сгенерированы"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Backup codes regeneration error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to regenerate backup codes")
+
+@api_router.get("/security/audit-log")
+async def get_user_audit_log(
+    days: int = Query(30, le=90),
+    current_user: User = Depends(get_current_user)
+):
+    """Get user's audit log"""
+    
+    try:
+        activity = audit_log.get_user_activity(current_user.id, days)
+        return {
+            "user_id": current_user.id,
+            "period_days": days,
+            "total_activities": len(activity),
+            "activities": activity[-50:]  # Last 50 activities
+        }
+        
+    except Exception as e:
+        logger.error(f"Audit log retrieval error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve audit log")
+
+@api_router.get("/security/admin/report")
+async def get_security_report(
+    hours: int = Query(24, le=168),  # Max 1 week
+    current_user: User = Depends(get_current_user)
+):
+    """Get security report for admins"""
+    
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access security reports")
+    
+    try:
+        security_report = security_service.get_security_report(hours)
+        audit_report = audit_log.get_audit_report(
+            start_date=datetime.now(timezone.utc) - timedelta(hours=hours),
+            end_date=datetime.now(timezone.utc)
+        )
+        
+        return {
+            "security_incidents": security_report,
+            "audit_summary": audit_report,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Security report error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate security report")
+
 # Vehicle type specific routes
 @api_router.get("/vehicles/{vehicle_type}", response_model=List[Car])
 async def get_vehicles_by_type(
