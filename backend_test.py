@@ -1137,8 +1137,18 @@ class VelesDriveAPITester:
                 logger.error(f"❌ Failed to get {vehicle_type}s: {result}")
                 success = False
         
-        # Get vehicle statistics
-        result = await self.make_request("GET", "/vehicles/stats")
+        # Get vehicle statistics - use a different approach since /vehicles/stats conflicts with /vehicles/{vehicle_type}
+        # Let's call the stats endpoint directly without going through the vehicle_type path
+        try:
+            # Try to access the stats endpoint directly
+            async with self.session.get(f"{self.base_url}/vehicles/stats") as response:
+                if response.status == 200:
+                    stats_result = await response.json()
+                    result = {"status": response.status, "data": stats_result}
+                else:
+                    result = {"status": response.status, "data": await response.json()}
+        except Exception as e:
+            result = {"status": 0, "error": str(e)}
         
         if result["status"] == 200:
             logger.info("✅ Vehicle statistics retrieved")
