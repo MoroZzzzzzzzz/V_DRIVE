@@ -1101,7 +1101,7 @@ async def get_customer_sales(customer_id: str, current_user: User = Depends(get_
     return [Sale(**sale) for sale in sales]
 
 @api_router.post("/crm/sales", response_model=Sale)
-async def record_sale(sale_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+async def record_sale(sale_data: Dict[str, Any], current_user: User = Depends(get_current_user)):
     """Record a new sale"""
     
     if current_user.role != UserRole.DEALER:
