@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import axios from 'axios';
+import ReviewsSystem from '../components/ReviewsSystem';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
