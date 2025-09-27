@@ -62,6 +62,16 @@ const Header = () => {
                 <Badge className="bg-gold text-black text-xs ml-2">PRO</Badge>
               </Link>
             )}
+            
+            {user?.role === 'dealer' && (
+              <Link
+                to="/subscription"
+                className={`nav-link ${isActive('/subscription') ? 'active' : ''}`}
+              >
+                <i className="fas fa-crown mr-2"></i>
+                Подписка
+              </Link>
+            )}
           </nav>
 
           {/* User Actions */}
