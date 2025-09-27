@@ -361,8 +361,9 @@ async def create_transaction(transaction_data: Dict[str, Any], current_user: Use
     await db.transactions.insert_one(transaction.dict())
     return transaction
 
-# Include router
+# Include routers
 app.include_router(api_router)
+app.include_router(payments_router)
 
 # CORS middleware
 app.add_middleware(
