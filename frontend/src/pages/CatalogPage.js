@@ -14,6 +14,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const CatalogPage = () => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedForComparison, setSelectedForComparison] = useState([]);
   const [filters, setFilters] = useState({
     brand: '',
     model: '',
@@ -23,6 +24,10 @@ const CatalogPage = () => {
     maxYear: '',
     isPremium: false
   });
+
+  const { user, token } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Mock data for development
   const mockCars = [
