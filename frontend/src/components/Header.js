@@ -90,6 +90,9 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="flex items-center space-x-4">
+                {/* Notifications */}
+                <NotificationBell />
+
                 {/* Favorites count for buyers */}
                 {user.role === 'buyer' && (
                   <Link to="/profile" className="relative">
