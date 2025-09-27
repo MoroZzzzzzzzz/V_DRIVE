@@ -26,7 +26,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Security
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security = HTTPBearer()
 SECRET_KEY = os.environ.get('SECRET_KEY', 'veles-drive-secret-key-2024')
 
