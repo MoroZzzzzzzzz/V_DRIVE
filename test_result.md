@@ -200,9 +200,9 @@ VELES DRIVE - современная платформа для автомоби�
         comment: "Интеграция с Telegram API отсутствует"
 
   - task: "Email уведомления"
-    implemented: false
-    working: "NA"
-    file: "backend/server.py"
+    implemented: true
+    working: true
+    file: "backend/integrations.py"
     stuck_count: 0
     priority: "medium"
     needs_retesting: true
@@ -210,6 +210,9 @@ VELES DRIVE - современная платформа для автомоби�
       - working: "NA"
         agent: "main"
         comment: "Email интеграция отсутствует"
+      - working: true
+        agent: "main"
+        comment: "Добавлена интеграция с SendGrid для отправки уведомлений об аукционах и отзывах. Настроены шаблоны писем в стиле VELES DRIVE"
 
   - task: "Загрузка изображений"
     implemented: false
