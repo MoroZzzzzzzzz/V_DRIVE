@@ -501,7 +501,7 @@ async def login(credentials: Dict[str, str], request: Request):
     # Verify password
     if not pwd_context.verify(password, user_data["password"]):
         # Record failed attempt
-        security_result = security_service.record_failed_attempt(client_ip, user.id)
+        security_service.record_failed_attempt(client_ip, user.id)
         
         # Update user login attempts
         await db.users.update_one(
