@@ -1172,6 +1172,144 @@ async def get_personal_offers(current_user: User = Depends(get_current_user)):
     offers = await db.personal_offers.find({"dealer_id": current_user.id}).sort("created_at", -1).to_list(length=None)
     return [PersonalOffer(**offer) for offer in offers]
 
+# Additional services routes (Insurance, Loans, Leasing)
+@api_router.post("/services/insurance/quote", response_model=InsuranceQuote)
+async def get_insurance_quote(
+    car_id: str = Form(...),
+    insurance_type: str = Form("OSAGO"),
+    coverage_amount: Optional[float] = Form(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Get insurance quote for a car"""
+    
+    # Verify car exists
+    car_data = await db.cars.find_one({"id": car_id})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Mock insurance calculation (in real app, integrate with insurance APIs)
+    car_value = car_data["price"]
+    
+    if insurance_type == "OSAGO":
+        yearly_premium = min(car_value * 0.02, 15000)  # 2% of car value, max 15k
+        coverage_amount = coverage_amount or 500000  # Standard OSAGO coverage
+    elif insurance_type == "KASKO":
+        yearly_premium = car_value * 0.08  # 8% for KASKO
+        coverage_amount = coverage_amount or car_value
+    else:  # FULL
+        yearly_premium = car_value * 0.12  # 12% for full coverage
+        coverage_amount = coverage_amount or car_value * 1.2
+    
+    monthly_premium = yearly_premium / 12
+    
+    quote = InsuranceQuote(
+        user_id=current_user.id,
+        car_id=car_id,
+        insurance_type=insurance_type,
+        coverage_amount=coverage_amount,
+        monthly_premium=monthly_premium,
+        yearly_premium=yearly_premium,
+        provider="VELES Insurance Partner",
+        valid_until=datetime.now(timezone.utc) + timedelta(days=30)
+    )
+    
+    await db.insurance_quotes.insert_one(quote.dict())
+    return quote
+
+@api_router.get("/services/insurance/quotes", response_model=List[InsuranceQuote])
+async def get_user_insurance_quotes(current_user: User = Depends(get_current_user)):
+    """Get user's insurance quotes"""
+    
+    quotes = await db.insurance_quotes.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [InsuranceQuote(**quote) for quote in quotes]
+
+@api_router.post("/services/loans/apply", response_model=LoanApplication)
+async def apply_for_loan(loan_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+    """Apply for auto loan"""
+    
+    # Verify car exists
+    car_data = await db.cars.find_one({"id": loan_data["car_id"]})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Mock loan calculation
+    car_price = car_data["price"]
+    loan_amount = loan_data["loan_amount"]
+    term_months = loan_data["loan_term_months"]
+    monthly_income = loan_data["monthly_income"]
+    
+    # Simple approval logic
+    debt_to_income_ratio = (loan_amount / term_months) / monthly_income
+    
+    if debt_to_income_ratio <= 0.3 and monthly_income >= 50000:  # 30% DTI ratio, min income 50k
+        interest_rate = 12.5  # 12.5% annual
+        monthly_payment = (loan_amount * (interest_rate/100/12) * (1 + interest_rate/100/12)**term_months) / ((1 + interest_rate/100/12)**term_months - 1)
+        status = "approved"
+    else:
+        interest_rate = None
+        monthly_payment = None
+        status = "pending"  # Would require manual review
+    
+    application = LoanApplication(
+        **loan_data,
+        user_id=current_user.id,
+        interest_rate=interest_rate,
+        monthly_payment=monthly_payment,
+        status=status,
+        bank_partner="VELES Bank Partner"
+    )
+    
+    if status == "approved":
+        application.approved_at = datetime.now(timezone.utc)
+    
+    await db.loan_applications.insert_one(application.dict())
+    return application
+
+@api_router.get("/services/loans/applications", response_model=List[LoanApplication])
+async def get_loan_applications(current_user: User = Depends(get_current_user)):
+    """Get user's loan applications"""
+    
+    applications = await db.loan_applications.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [LoanApplication(**app) for app in applications]
+
+@api_router.post("/services/leasing/apply", response_model=LeaseApplication)
+async def apply_for_lease(lease_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+    """Apply for car leasing"""
+    
+    # Verify car exists
+    car_data = await db.cars.find_one({"id": lease_data["car_id"]})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    car_price = car_data["price"]
+    term_months = lease_data["lease_term_months"]
+    
+    # Mock leasing calculation
+    down_payment = car_price * 0.2  # 20% down
+    residual_value = car_price * 0.4  # 40% residual value
+    monthly_payment = (car_price - down_payment - residual_value) / term_months
+    
+    application = LeaseApplication(
+        **lease_data,
+        user_id=current_user.id,
+        monthly_payment=monthly_payment,
+        down_payment=down_payment,
+        residual_value=residual_value,
+        status="approved",  # Simplified approval
+        leasing_company="VELES Leasing Partner",
+        approved_at=datetime.now(timezone.utc)
+    )
+    
+    await db.lease_applications.insert_one(application.dict())
+    return application
+
+@api_router.get("/services/leasing/applications", response_model=List[LeaseApplication])
+async def get_lease_applications(current_user: User = Depends(get_current_user)):
+    """Get user's lease applications"""
+    
+    applications = await db.lease_applications.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [LeaseApplication(**app) for app in applications]
+
 # Include routers
 app.include_router(api_router)
 app.include_router(payments_router)
