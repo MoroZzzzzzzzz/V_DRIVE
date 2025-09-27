@@ -936,6 +936,242 @@ async def delete_file(
     else:
         raise HTTPException(status_code=404, detail="File not found or could not be deleted")
 
+# Car comparison and history routes
+@api_router.post("/cars/{car_id}/view")
+async def record_car_view(car_id: str, current_user: User = Depends(get_current_user)):
+    """Record that user viewed a car"""
+    
+    # Check if car exists
+    car_data = await db.cars.find_one({"id": car_id})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Record view
+    view_history = ViewHistory(user_id=current_user.id, car_id=car_id)
+    await db.view_history.insert_one(view_history.dict())
+    
+    return {"message": "View recorded"}
+
+@api_router.get("/cars/history", response_model=List[Car])
+async def get_view_history(current_user: User = Depends(get_current_user), limit: int = Query(20, le=100)):
+    """Get user's car viewing history"""
+    
+    # Get recent views
+    views = await db.view_history.find({"user_id": current_user.id}).sort("viewed_at", -1).limit(limit).to_list(length=None)
+    car_ids = [view["car_id"] for view in views]
+    
+    # Get cars
+    cars = await db.cars.find({"id": {"$in": car_ids}}).to_list(length=None)
+    
+    # Sort cars by view order
+    cars_dict = {car["id"]: car for car in cars}
+    sorted_cars = [cars_dict[car_id] for car_id in car_ids if car_id in cars_dict]
+    
+    return [Car(**car) for car in sorted_cars]
+
+@api_router.post("/comparisons", response_model=CarComparison)
+async def create_comparison(
+    car_ids: List[str] = Form(...),
+    name: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a car comparison"""
+    
+    if len(car_ids) < 2 or len(car_ids) > 5:
+        raise HTTPException(status_code=400, detail="Can compare 2-5 cars")
+    
+    # Verify all cars exist
+    cars = await db.cars.find({"id": {"$in": car_ids}}).to_list(length=None)
+    if len(cars) != len(car_ids):
+        raise HTTPException(status_code=404, detail="One or more cars not found")
+    
+    comparison = CarComparison(user_id=current_user.id, car_ids=car_ids, name=name)
+    await db.comparisons.insert_one(comparison.dict())
+    
+    return comparison
+
+@api_router.get("/comparisons", response_model=List[CarComparison])
+async def get_comparisons(current_user: User = Depends(get_current_user)):
+    """Get user's car comparisons"""
+    
+    comparisons = await db.comparisons.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [CarComparison(**comp) for comp in comparisons]
+
+@api_router.get("/comparisons/{comparison_id}/cars", response_model=List[Car])
+async def get_comparison_cars(comparison_id: str, current_user: User = Depends(get_current_user)):
+    """Get cars in a comparison"""
+    
+    comparison = await db.comparisons.find_one({"id": comparison_id, "user_id": current_user.id})
+    if not comparison:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    
+    cars = await db.cars.find({"id": {"$in": comparison["car_ids"]}}).to_list(length=None)
+    return [Car(**car) for car in cars]
+
+@api_router.delete("/comparisons/{comparison_id}")
+async def delete_comparison(comparison_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a comparison"""
+    
+    result = await db.comparisons.delete_one({"id": comparison_id, "user_id": current_user.id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    
+    return {"message": "Comparison deleted"}
+
+# CRM routes for dealers
+@api_router.get("/crm/customers", response_model=List[Customer])
+async def get_customers(current_user: User = Depends(get_current_user), limit: int = Query(50, le=200)):
+    """Get dealer's customers"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can access CRM")
+    
+    customers = await db.customers.find({"dealer_id": current_user.id}).sort("created_at", -1).limit(limit).to_list(length=None)
+    return [Customer(**customer) for customer in customers]
+
+@api_router.post("/crm/customers", response_model=Customer)
+async def create_customer(customer_data: CustomerCreate, current_user: User = Depends(get_current_user)):
+    """Create new customer"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can create customers")
+    
+    # Check if customer already exists
+    existing = await db.customers.find_one({"dealer_id": current_user.id, "email": customer_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Customer with this email already exists")
+    
+    customer = Customer(**customer_data.dict(), dealer_id=current_user.id)
+    await db.customers.insert_one(customer.dict())
+    
+    return customer
+
+@api_router.get("/crm/customers/{customer_id}", response_model=Customer)
+async def get_customer(customer_id: str, current_user: User = Depends(get_current_user)):
+    """Get customer details"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can access CRM")
+    
+    customer = await db.customers.find_one({"id": customer_id, "dealer_id": current_user.id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    return Customer(**customer)
+
+@api_router.put("/crm/customers/{customer_id}", response_model=Customer)
+async def update_customer(customer_id: str, customer_data: CustomerCreate, current_user: User = Depends(get_current_user)):
+    """Update customer"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can update customers")
+    
+    # Check if customer exists
+    existing = await db.customers.find_one({"id": customer_id, "dealer_id": current_user.id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    update_data = customer_data.dict()
+    update_data["last_contact"] = datetime.now(timezone.utc)
+    
+    await db.customers.update_one({"id": customer_id}, {"$set": update_data})
+    
+    updated_customer = await db.customers.find_one({"id": customer_id})
+    return Customer(**updated_customer)
+
+@api_router.get("/crm/customers/{customer_id}/sales", response_model=List[Sale])
+async def get_customer_sales(customer_id: str, current_user: User = Depends(get_current_user)):
+    """Get customer's purchase history"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can access sales data")
+    
+    sales = await db.sales.find({"customer_id": customer_id, "dealer_id": current_user.id}).sort("sale_date", -1).to_list(length=None)
+    return [Sale(**sale) for sale in sales]
+
+@api_router.post("/crm/sales", response_model=Sale)
+async def record_sale(sale_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+    """Record a new sale"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can record sales")
+    
+    # Verify customer and car exist
+    customer = await db.customers.find_one({"id": sale_data["customer_id"], "dealer_id": current_user.id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    car = await db.cars.find_one({"id": sale_data["car_id"], "dealer_id": current_user.id})
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    sale = Sale(**sale_data, dealer_id=current_user.id)
+    await db.sales.insert_one(sale.dict())
+    
+    # Update car status to sold
+    await db.cars.update_one({"id": sale_data["car_id"]}, {"$set": {"status": "sold"}})
+    
+    return sale
+
+@api_router.post("/crm/offers", response_model=PersonalOffer)
+async def create_personal_offer(offer_data: Dict[str, any], current_user: User = Depends(get_current_user)):
+    """Create personal offer for customer"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can create offers")
+    
+    # Verify customer and car exist
+    customer = await db.customers.find_one({"id": offer_data["customer_id"], "dealer_id": current_user.id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    car = await db.cars.find_one({"id": offer_data["car_id"], "dealer_id": current_user.id})
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Calculate discount
+    regular_price = car["price"]
+    offer_price = offer_data["offer_price"]
+    discount_percent = ((regular_price - offer_price) / regular_price) * 100
+    
+    offer = PersonalOffer(
+        **offer_data, 
+        dealer_id=current_user.id,
+        regular_price=regular_price,
+        discount_percent=discount_percent
+    )
+    await db.personal_offers.insert_one(offer.dict())
+    
+    # Send notification to customer
+    try:
+        car_details = {
+            "brand": car["brand"],
+            "model": car["model"],
+            "year": car["year"],
+            "regular_price": regular_price,
+            "offer_price": offer_price,
+            "discount_percent": discount_percent
+        }
+        
+        # Email notification would go here if customer has email
+        if customer.get("email"):
+            pass  # TODO: Send personal offer email
+            
+    except Exception as e:
+        logger.error(f"Failed to send offer notification: {e}")
+    
+    return offer
+
+@api_router.get("/crm/offers", response_model=List[PersonalOffer])
+async def get_personal_offers(current_user: User = Depends(get_current_user)):
+    """Get dealer's personal offers"""
+    
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can view offers")
+    
+    offers = await db.personal_offers.find({"dealer_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [PersonalOffer(**offer) for offer in offers]
+
 # Include routers
 app.include_router(api_router)
 app.include_router(payments_router)
