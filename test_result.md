@@ -146,8 +146,8 @@ VELES DRIVE - современная платформа для автомоби�
         comment: "Добавлены endpoints для отзывов: GET /reviews/dealer/{id}, POST /reviews, GET /reviews/my с email уведомлениями"
 
   - task: "Система аукционов"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -156,6 +156,9 @@ VELES DRIVE - современная платформа для автомоби�
       - working: "NA"
         agent: "main"
         comment: "Полностью отсутствует - нужны модели и endpoints"
+      - working: true
+        agent: "main"
+        comment: "Добавлены модели Auction, Bid и полные API endpoints для создания аукционов, размещения ставок, получения списка аукционов и ставок с уведомлениями"
 
   - task: "ERP система"
     implemented: false
