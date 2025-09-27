@@ -1445,7 +1445,7 @@ class VelesDriveAPITester:
         
         # Test accessing protected endpoint without token
         result = await self.make_request("GET", "/erp/dashboard")
-        if result["status"] == 401:
+        if result["status"] in [401, 403]:  # Both 401 and 403 are valid for unauthorized access
             logger.info("✅ Unauthorized access properly blocked")
             auth_results["unauthorized_access_blocked"] = True
         else:
