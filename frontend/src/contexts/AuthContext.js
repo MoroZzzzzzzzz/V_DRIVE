@@ -36,18 +36,9 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Try to get current user info (this would need to be implemented in the backend)
-        // For now, we'll just check if token exists and is valid by making a test request
-        await axios.get(`${BACKEND_URL}/api/`);
-        
-        // In a real app, you'd decode the token or make a /me endpoint call
-        // For now, we'll set a mock user based on token existence
-        setUser({
-          id: 'mock-user-id',
-          email: 'user@example.com',
-          full_name: 'Пользователь',
-          role: 'buyer' // This would come from the backend
-        });
+        // Get current user info from backend
+        const response = await axios.get(`${BACKEND_URL}/api/auth/me`);
+        setUser(response.data);
       } catch (error) {
         console.error('Token validation failed:', error);
         localStorage.removeItem('veles_token');
