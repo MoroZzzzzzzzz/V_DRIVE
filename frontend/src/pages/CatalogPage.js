@@ -103,6 +103,55 @@ const CatalogPage = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  // Record car view
+  const recordCarView = async (carId) => {
+    if (!user || !token) return;
+    
+    try {
+      await axios.post(`${BACKEND_URL}/api/cars/${carId}/view`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('Error recording car view:', error);
+    }
+  };
+
+  // Comparison functions
+  const toggleComparison = (carId) => {
+    setSelectedForComparison(prev => {
+      if (prev.includes(carId)) {
+        return prev.filter(id => id !== carId);
+      } else {
+        if (prev.length >= 5) {
+          toast({
+            title: "Максимум 5 автомобилей",
+            description: "Можно сравнить не более 5 автомобилей одновременно",
+            variant: "destructive"
+          });
+          return prev;
+        }
+        return [...prev, carId];
+      }
+    });
+  };
+
+  const compareSelected = () => {
+    if (selectedForComparison.length < 2) {
+      toast({
+        title: "Выберите автомобили",
+        description: "Для сравнения нужно выбрать минимум 2 автомобиля",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    navigate('/compare', { state: { carIds: selectedForComparison } });
+  };
+
+  const clearComparison = () => {
+    setSelectedForComparison([]);
+  };
+
   return (
     <div className="pt-20 min-h-screen bg-black">
       {/* Header */}
