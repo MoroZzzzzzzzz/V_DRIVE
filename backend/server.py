@@ -348,20 +348,6 @@ class PersonalOffer(BaseModel):
     status: str = "active"  # active, accepted, declined, expired
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class VehicleType(str, Enum):
-    CAR = "car"
-    MOTORCYCLE = "motorcycle"
-    BOAT = "boat"
-    PLANE = "plane"
-
-class LeadStatus(str, Enum):
-    NEW = "new"
-    CONTACTED = "contacted"
-    QUALIFIED = "qualified"
-    PROPOSAL = "proposal"
-    WON = "won"
-    LOST = "lost"
-
 class Lead(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     dealer_id: str
