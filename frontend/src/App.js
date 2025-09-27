@@ -29,6 +29,8 @@ import { FavoritesProvider } from './contexts/FavoritesContext';
 import { NotificationProvider } from './components/NotificationSystem';
 
 function App() {
+  const [showAIAssistant, setShowAIAssistant] = React.useState(false);
+
   return (
     <AuthProvider>
       <FavoritesProvider>
