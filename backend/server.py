@@ -446,6 +446,193 @@ async def create_transaction(transaction_data: Dict[str, Any], current_user: Use
     await db.transactions.insert_one(transaction.dict())
     return transaction
 
+# Reviews routes
+@api_router.get("/reviews/dealer/{dealer_id}", response_model=List[Review])
+async def get_dealer_reviews(dealer_id: str, limit: int = Query(20, le=100)):
+    reviews = await db.reviews.find({"dealer_id": dealer_id}).sort("created_at", -1).limit(limit).to_list(length=None)
+    return [Review(**review) for review in reviews]
+
+@api_router.post("/reviews", response_model=Review)
+async def create_review(review_data: ReviewCreate, current_user: User = Depends(get_current_user)):
+    # Check if user already reviewed this dealer
+    existing = await db.reviews.find_one({"user_id": current_user.id, "dealer_id": review_data.dealer_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already reviewed this dealer")
+    
+    review = Review(**review_data.dict(), user_id=current_user.id)
+    await db.reviews.insert_one(review.dict())
+    
+    # Update dealer rating
+    reviews = await db.reviews.find({"dealer_id": review_data.dealer_id}).to_list(length=None)
+    avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
+    await db.dealers.update_one(
+        {"id": review_data.dealer_id},
+        {"$set": {"rating": avg_rating, "reviews_count": len(reviews)}}
+    )
+    
+    return review
+
+@api_router.get("/reviews/my", response_model=List[Review])
+async def get_my_reviews(current_user: User = Depends(get_current_user)):
+    reviews = await db.reviews.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [Review(**review) for review in reviews]
+
+# Notifications routes
+@api_router.get("/notifications", response_model=List[Notification])
+async def get_notifications(current_user: User = Depends(get_current_user)):
+    notifications = await db.notifications.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [Notification(**notif) for notif in notifications]
+
+@api_router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": current_user.id},
+        {"$set": {"is_read": True}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification marked as read"}
+
+@api_router.post("/notifications/admin", response_model=Notification)
+async def create_notification(notification_data: NotificationCreate, target_user_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can create notifications")
+    
+    notification = Notification(**notification_data.dict(), user_id=target_user_id)
+    await db.notifications.insert_one(notification.dict())
+    return notification
+
+# Auctions routes
+@api_router.get("/auctions", response_model=List[Auction])
+async def get_auctions(status: Optional[AuctionStatus] = None, limit: int = Query(20, le=100)):
+    filter_query = {}
+    if status:
+        filter_query["status"] = status
+    
+    auctions = await db.auctions.find(filter_query).sort("created_at", -1).limit(limit).to_list(length=None)
+    return [Auction(**auction) for auction in auctions]
+
+@api_router.get("/auctions/{auction_id}", response_model=Auction)
+async def get_auction(auction_id: str):
+    auction_data = await db.auctions.find_one({"id": auction_id})
+    if not auction_data:
+        raise HTTPException(status_code=404, detail="Auction not found")
+    return Auction(**auction_data)
+
+@api_router.post("/auctions", response_model=Auction)
+async def create_auction(auction_data: AuctionCreate, current_user: User = Depends(get_current_user)):
+    if current_user.role not in [UserRole.DEALER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only dealers can create auctions")
+    
+    # Check if car exists and belongs to dealer
+    car_data = await db.cars.find_one({"id": auction_data.car_id})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    if car_data["dealer_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only auction your own cars")
+    
+    start_time = datetime.now(timezone.utc)
+    end_time = start_time + timedelta(hours=auction_data.duration_hours)
+    
+    auction = Auction(
+        **auction_data.dict(exclude={"duration_hours"}),
+        dealer_id=current_user.id,
+        current_price=auction_data.start_price,
+        start_time=start_time,
+        end_time=end_time
+    )
+    await db.auctions.insert_one(auction.dict())
+    return auction
+
+@api_router.get("/auctions/{auction_id}/bids", response_model=List[Bid])
+async def get_auction_bids(auction_id: str):
+    bids = await db.bids.find({"auction_id": auction_id}).sort("amount", -1).to_list(length=None)
+    return [Bid(**bid) for bid in bids]
+
+@api_router.post("/auctions/{auction_id}/bid", response_model=Bid)
+async def place_bid(auction_id: str, bid_data: BidCreate, current_user: User = Depends(get_current_user)):
+    # Check if auction exists and is active
+    auction_data = await db.auctions.find_one({"id": auction_id})
+    if not auction_data:
+        raise HTTPException(status_code=404, detail="Auction not found")
+    
+    auction = Auction(**auction_data)
+    if auction.status != AuctionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Auction is not active")
+    
+    if datetime.now(timezone.utc) > auction.end_time:
+        raise HTTPException(status_code=400, detail="Auction has ended")
+    
+    # Check if bid amount is valid
+    min_bid = auction.current_price + auction.min_bid_increment
+    if bid_data.amount < min_bid:
+        raise HTTPException(status_code=400, detail=f"Minimum bid is {min_bid}")
+    
+    # Create bid
+    bid = Bid(**bid_data.dict(), auction_id=auction_id, user_id=current_user.id)
+    await db.bids.insert_one(bid.dict())
+    
+    # Update auction current price
+    await db.auctions.update_one(
+        {"id": auction_id},
+        {"$set": {"current_price": bid_data.amount}}
+    )
+    
+    return bid
+
+# Projects (Trello-style) routes
+@api_router.get("/projects", response_model=List[Project])
+async def get_projects(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can access projects")
+    
+    projects = await db.projects.find({"dealer_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    return [Project(**project) for project in projects]
+
+@api_router.post("/projects", response_model=Project)
+async def create_project(project_data: ProjectCreate, current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can create projects")
+    
+    project = Project(**project_data.dict(), dealer_id=current_user.id)
+    await db.projects.insert_one(project.dict())
+    return project
+
+@api_router.put("/projects/{project_id}", response_model=Project)
+async def update_project(project_id: str, project_data: ProjectUpdate, current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can update projects")
+    
+    # Check if project exists and belongs to dealer
+    existing = await db.projects.find_one({"id": project_id, "dealer_id": current_user.id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    update_data = {k: v for k, v in project_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.projects.update_one({"id": project_id}, {"$set": update_data})
+    
+    updated_project = await db.projects.find_one({"id": project_id})
+    return Project(**updated_project)
+
+@api_router.delete("/projects/{project_id}")
+async def delete_project(project_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.DEALER:
+        raise HTTPException(status_code=403, detail="Only dealers can delete projects")
+    
+    result = await db.projects.delete_one({"id": project_id, "dealer_id": current_user.id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"message": "Project deleted"}
+
+# File upload route
+@api_router.post("/upload")
+async def upload_file(file: str = Field(...), filename: str = Field(...), current_user: User = Depends(get_current_user)):
+    # For now, return a mock URL - will implement proper file storage later
+    file_url = f"https://storage.veledrive.com/{filename}"
+    return {"url": file_url}
+
 # Include routers
 app.include_router(api_router)
 app.include_router(payments_router)
