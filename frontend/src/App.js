@@ -61,6 +61,9 @@ function App() {
                 isOpen={showAIAssistant} 
                 onToggle={() => setShowAIAssistant(!showAIAssistant)} 
               />
+              
+              {/* PWA Install Prompt */}
+              <PWAInstall />
               </main>
               <Footer />
             </BrowserRouter>
