@@ -471,6 +471,19 @@ async def create_review(review_data: ReviewCreate, current_user: User = Depends(
         {"$set": {"rating": avg_rating, "reviews_count": len(reviews)}}
     )
     
+    # Send notification to dealer
+    try:
+        dealer_data = await db.dealers.find_one({"id": review_data.dealer_id})
+        if dealer_data:
+            await notification_service.notify_new_review(
+                dealer_data["email"],
+                current_user.full_name,
+                review_data.rating,
+                review_data.comment or ""
+            )
+    except Exception as e:
+        logger.error(f"Failed to send review notification: {e}")
+    
     return review
 
 @api_router.get("/reviews/my", response_model=List[Review])
