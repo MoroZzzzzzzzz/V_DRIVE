@@ -35,16 +35,21 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
 
+    console.log('Login attempt:', { email: loginForm.email, password: '***' });
+
     try {
       const result = await login(loginForm.email, loginForm.password);
+      console.log('Login result:', result);
       
       if (result.success) {
         toast.success('Успешный вход в систему!');
       } else {
         toast.error(result.error || 'Ошибка входа');
+        console.error('Login failed:', result.error);
       }
     } catch (error) {
       toast.error('Произошла ошибка при входе');
+      console.error('Login error:', error);
     } finally {
       setLoading(false);
     }
