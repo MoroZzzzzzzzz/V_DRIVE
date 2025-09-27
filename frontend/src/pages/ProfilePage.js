@@ -388,6 +388,7 @@ const ProfilePage = () => {
           {activeTab === 'profile' && renderProfile()}
           {activeTab === 'favorites' && renderFavorites()}
           {activeTab === 'history' && renderHistory()}
+          {activeTab === 'telegram' && <TelegramBot />}
           {activeTab === 'settings' && renderSettings()}
         </div>
       </div>
