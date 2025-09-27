@@ -163,6 +163,91 @@ class Transaction(BaseModel):
     description: str
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class ReviewCreate(BaseModel):
+    dealer_id: str
+    rating: int = Field(ge=1, le=5)
+    comment: Optional[str] = None
+
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    message: str
+    type: str = "info"  # info, warning, success, error
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NotificationCreate(BaseModel):
+    title: str
+    message: str
+    type: str = "info"
+
+class AuctionStatus(str, Enum):
+    ACTIVE = "active"
+    ENDED = "ended"
+    CANCELLED = "cancelled"
+
+class Auction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    car_id: str
+    dealer_id: str
+    start_price: float
+    current_price: float
+    min_bid_increment: float = 1000.0
+    start_time: datetime
+    end_time: datetime
+    status: AuctionStatus = AuctionStatus.ACTIVE
+    winner_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class AuctionCreate(BaseModel):
+    car_id: str
+    start_price: float
+    min_bid_increment: float = 1000.0
+    duration_hours: int = 24
+
+class Bid(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    auction_id: str
+    user_id: str
+    amount: float
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BidCreate(BaseModel):
+    amount: float
+
+class ProjectStatus(str, Enum):
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+class Project(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    title: str
+    description: Optional[str] = None
+    status: ProjectStatus = ProjectStatus.TODO
+    assigned_to: Optional[str] = None
+    priority: str = "medium"  # low, medium, high
+    due_date: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProjectCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    assigned_to: Optional[str] = None
+    priority: str = "medium"
+    due_date: Optional[datetime] = None
+
+class ProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[ProjectStatus] = None
+    assigned_to: Optional[str] = None
+    priority: Optional[str] = None
+    due_date: Optional[datetime] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
