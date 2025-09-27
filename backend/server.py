@@ -1236,7 +1236,6 @@ async def apply_for_loan(loan_data: Dict[str, any], current_user: User = Depends
         raise HTTPException(status_code=404, detail="Car not found")
     
     # Mock loan calculation
-    car_price = car_data["price"]
     loan_amount = loan_data["loan_amount"]
     term_months = loan_data["loan_term_months"]
     monthly_income = loan_data["monthly_income"]
