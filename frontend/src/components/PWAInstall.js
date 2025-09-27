@@ -9,7 +9,7 @@ import {
   Monitor,
   Zap,
   Bell,
-  Offline
+  WifiOff
 } from 'lucide-react';
 
 const PWAInstall = () => {
