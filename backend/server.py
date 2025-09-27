@@ -77,6 +77,7 @@ class UserLogin(BaseModel):
 class Car(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     dealer_id: str
+    vehicle_type: VehicleType = VehicleType.CAR
     brand: str
     model: str
     year: int
@@ -94,6 +95,11 @@ class Car(BaseModel):
     status: CarStatus = CarStatus.AVAILABLE
     is_premium: bool = False
     location: Optional[str] = None
+    # Vehicle type specific fields
+    engine_power: Optional[int] = None  # HP for cars, motorcycles
+    boat_length: Optional[float] = None  # For boats
+    plane_seats: Optional[int] = None  # For planes
+    hours_operated: Optional[int] = None  # For boats/planes instead of mileage
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
