@@ -14,6 +14,7 @@ import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import PremiumCatalog from './pages/PremiumCatalog';
 import SubscriptionPage from './pages/SubscriptionPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Components
 import Header from './components/Header';
