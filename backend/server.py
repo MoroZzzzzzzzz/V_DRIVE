@@ -674,12 +674,119 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="Project not found")
     return {"message": "Project deleted"}
 
-# File upload route
-@api_router.post("/upload")
-async def upload_file(file: str = Field(...), filename: str = Field(...), current_user: User = Depends(get_current_user)):
-    # For now, return a mock URL - will implement proper file storage later
-    file_url = f"https://storage.veledrive.com/{filename}"
-    return {"url": file_url}
+# File upload routes
+@api_router.post("/upload/car-image")
+async def upload_car_image(
+    file: UploadFile = File(...),
+    car_id: str = Form(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload car image"""
+    if current_user.role not in [UserRole.DEALER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only dealers can upload car images")
+    
+    # Check if car exists and belongs to current dealer
+    car_data = await db.cars.find_one({"id": car_id})
+    if not car_data:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    if car_data["dealer_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only upload images for your own cars")
+    
+    try:
+        result = await file_upload_service.upload_file(file, "cars", car_id)
+        
+        # Update car with new image
+        images = car_data.get("images", [])
+        images.append(result["file_path"])
+        await db.cars.update_one({"id": car_id}, {"$set": {"images": images}})
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/upload/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload user avatar"""
+    try:
+        result = await file_upload_service.upload_file(file, "avatars", current_user.id)
+        
+        # Update user with new avatar
+        await db.users.update_one(
+            {"id": current_user.id}, 
+            {"$set": {"avatar_url": result["file_path"]}}
+        )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/upload/dealer-logo")
+async def upload_dealer_logo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload dealer logo"""
+    if current_user.role not in [UserRole.DEALER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only dealers can upload logos")
+    
+    # Get or create dealer profile
+    dealer_data = await db.dealers.find_one({"user_id": current_user.id})
+    if not dealer_data:
+        raise HTTPException(status_code=404, detail="Dealer profile not found")
+    
+    try:
+        result = await file_upload_service.upload_file(file, "logos", dealer_data["id"])
+        
+        # Update dealer with new logo
+        await db.dealers.update_one(
+            {"id": dealer_data["id"]}, 
+            {"$set": {"logo_url": result["file_path"]}}
+        )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/files/{category}/{filename}")
+async def get_file(category: str, filename: str):
+    """Serve uploaded files"""
+    if category not in ["cars", "avatars", "logos"]:
+        raise HTTPException(status_code=404, detail="Invalid category")
+    
+    file_path = Path(f"uploads/{category}/{filename}")
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(file_path)
+
+@api_router.delete("/files/{category}/{filename}")
+async def delete_file(
+    category: str, 
+    filename: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete uploaded file"""
+    # Only allow file owners or admins to delete files
+    if current_user.role != UserRole.ADMIN:
+        # Additional permission checks would go here
+        pass
+    
+    file_path = f"{category}/{filename}"
+    success = file_upload_service.delete_file(file_path)
+    
+    if success:
+        return {"message": "File deleted successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="File not found or could not be deleted")
 
 # Include routers
 app.include_router(api_router)
