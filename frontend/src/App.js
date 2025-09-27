@@ -39,6 +39,7 @@ function App() {
                 <Route path="/dealers" element={<DealersPage />} />
                 <Route path="/dealer/:id" element={<DealerDetailPage />} />
                 <Route path="/erp" element={<ERPDashboard />} />
+                <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Routes>
