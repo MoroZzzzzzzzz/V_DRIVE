@@ -943,7 +943,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid gap-6">
-        {reports.map((report) => (
+        {(reports || []).map((report) => (
           <Card key={report.id} className="bg-gray-900 border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
