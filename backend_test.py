@@ -2212,11 +2212,16 @@ class VelesDriveAPITester:
                 login_result = await self.make_request("POST", "/auth/login", login_data)
                 
                 if login_result["status"] == 200:
-                    logger.info(f"✅ {role.title()} login successful")
                     if "access_token" in login_result["data"]:
+                        logger.info(f"✅ {role.title()} login successful")
                         self.auth_tokens[role] = login_result["data"]["access_token"]
+                    elif login_result["data"].get("requires_2fa"):
+                        logger.info(f"ℹ️  {role.title()} requires 2FA, will handle in 2FA tests")
+                        # For now, we'll skip this user for basic setup
+                        # The 2FA tests will handle this case
+                        continue
                     else:
-                        logger.error(f"❌ No access token in login response: {login_result}")
+                        logger.error(f"❌ Unexpected login response: {login_result}")
                         success = False
                 else:
                     logger.error(f"❌ {role.title()} login failed: {login_result}")
