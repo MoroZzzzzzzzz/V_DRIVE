@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,7 @@ import {
   Gift,
   TrendingUp
 } from 'lucide-react';
-import { AuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 
 const CRMPanel = () => {
@@ -40,7 +40,7 @@ const CRMPanel = () => {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const { user, token } = useContext(AuthContext);
+  const { user, token, isDealer } = useAuth();
   const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
