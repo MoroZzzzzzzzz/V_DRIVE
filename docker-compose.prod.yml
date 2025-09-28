@@ -1,0 +1,130 @@
+# Production Docker Compose для VELES DRIVE
+version: '3.8'
+
+services:
+  # MongoDB Database (Production)
+  mongodb:
+    image: mongo:7.0
+    container_name: veles_mongodb_prod
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DB_NAME}
+    volumes:
+      - mongodb_data_prod:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./backups:/backups  # Папка для бэкапов
+    networks:
+      - veles_network
+    command: --auth --bind_ip_all
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Backend API (Production)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: veles_backend_prod
+    restart: always
+    environment:
+      - MONGO_URL=mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${DB_NAME}?authSource=admin
+      - DB_NAME=${DB_NAME}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - EMERGENT_LLM_KEY=${EMERGENT_LLM_KEY:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - veles_network
+    volumes:
+      - backend_uploads_prod:/app/uploads
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Frontend (Production)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - REACT_APP_BACKEND_URL=https://${DOMAIN}/api
+    container_name: veles_frontend_prod
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - veles_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: veles_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - veles_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Backup service (запуск по расписанию)
+  backup:
+    image: mongo:7.0
+    container_name: veles_backup_service
+    restart: "no"
+    volumes:
+      - ./backups:/backups
+      - ./docker/backup.sh:/backup.sh:ro
+    networks:
+      - veles_network
+    depends_on:
+      - mongodb
+    entrypoint: /backup.sh
+    profiles:
+      - backup
+
+volumes:
+  mongodb_data_prod:
+    driver: local
+  backend_uploads_prod:
+    driver: local
+
+networks:
+  veles_network:
+    driver: bridge
