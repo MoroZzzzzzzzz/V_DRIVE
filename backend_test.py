@@ -4507,6 +4507,132 @@ async def main_review_request_tests():
         logger.error(f"❌ Тестирование завершилось с ошибкой: {str(e)}")
         sys.exit(1)
 
+async def main_cors_auth_tests():
+    """Main test runner for CORS and Authentication testing after CORS fix"""
+    logger.info("🚀 Starting VELES DRIVE CORS and Authentication Testing")
+    logger.info(f"Testing against: {BASE_URL}")
+    logger.info("🎯 Focus: CORS Configuration and Authentication API after CORS fix")
+    logger.info("📋 Test Users: admin@test.com, dealer@test.com, buyer@test.com (password: testpass123)")
+    
+    try:
+        async with VelesDriveAPITester() as tester:
+            # Test basic connectivity first
+            if not await tester.test_basic_connectivity():
+                logger.error("❌ Basic connectivity failed. Exiting.")
+                sys.exit(1)
+            
+            # Priority tests for CORS and Authentication
+            priority_tests = [
+                ("CORS Configuration", tester.test_cors_configuration),
+                ("Authentication API", tester.test_specific_authentication_users),
+            ]
+            
+            results = {}
+            
+            # Run priority tests
+            logger.info(f"\n{'='*80}")
+            logger.info("🎯 PRIORITY TESTS - CORS and Authentication")
+            logger.info(f"{'='*80}")
+            
+            for test_name, test_func in priority_tests:
+                logger.info(f"\n{'='*60}")
+                logger.info(f"🧪 Running: {test_name}")
+                logger.info(f"{'='*60}")
+                
+                try:
+                    result = await test_func()
+                    results[test_name] = result
+                    
+                    if result:
+                        logger.info(f"✅ {test_name}: PASSED")
+                    else:
+                        logger.error(f"❌ {test_name}: FAILED")
+                        
+                except Exception as e:
+                    logger.error(f"💥 {test_name}: ERROR - {str(e)}")
+                    results[test_name] = False
+            
+            # Test Users Verification - check that authenticated users can access protected endpoints
+            logger.info(f"\n{'='*60}")
+            logger.info("🧪 Running: Test Users Verification")
+            logger.info(f"{'='*60}")
+            
+            test_users_success = True
+            
+            # Test that authenticated users can access protected endpoints
+            if "test_admin" in tester.auth_tokens:
+                logger.info("🔍 Testing admin user access to protected endpoints...")
+                headers = {"Authorization": f"Bearer {tester.auth_tokens['test_admin']}"}
+                result = await tester.make_request("GET", "/admin/stats", headers=headers)
+                
+                if result["status"] == 200:
+                    logger.info("✅ Admin user can access admin endpoints")
+                else:
+                    logger.error(f"❌ Admin user cannot access admin endpoints: {result}")
+                    test_users_success = False
+            
+            if "test_dealer" in tester.auth_tokens:
+                logger.info("🔍 Testing dealer user access to ERP endpoints...")
+                headers = {"Authorization": f"Bearer {tester.auth_tokens['test_dealer']}"}
+                result = await tester.make_request("GET", "/erp/dashboard", headers=headers)
+                
+                if result["status"] == 200:
+                    logger.info("✅ Dealer user can access ERP endpoints")
+                else:
+                    logger.error(f"❌ Dealer user cannot access ERP endpoints: {result}")
+                    test_users_success = False
+            
+            if "test_buyer" in tester.auth_tokens:
+                logger.info("🔍 Testing buyer user access to user endpoints...")
+                headers = {"Authorization": f"Bearer {tester.auth_tokens['test_buyer']}"}
+                result = await tester.make_request("GET", "/favorites", headers=headers)
+                
+                if result["status"] == 200:
+                    logger.info("✅ Buyer user can access user endpoints")
+                else:
+                    logger.error(f"❌ Buyer user cannot access user endpoints: {result}")
+                    test_users_success = False
+            
+            results["Test Users Verification"] = test_users_success
+            
+            # Print final summary
+            logger.info(f"\n{'='*80}")
+            logger.info("📊 CORS AND AUTHENTICATION TEST RESULTS")
+            logger.info(f"{'='*80}")
+            
+            passed = sum(1 for result in results.values() if result)
+            total = len(results)
+            
+            for test_name, result in results.items():
+                status = "✅ PASSED" if result else "❌ FAILED"
+                logger.info(f"{test_name}: {status}")
+            
+            success_rate = (passed / total * 100) if total > 0 else 0
+            logger.info(f"\n🎯 Overall Success Rate: {passed}/{total} ({success_rate:.1f}%)")
+            
+            if passed == total:
+                logger.info("🎉 All CORS and Authentication tests passed successfully!")
+                logger.info("✅ CORS is properly configured for frontend domain")
+                logger.info("✅ Authentication API works correctly with test users")
+                logger.info("✅ Test users can access their respective protected endpoints")
+                logger.info("🌐 Frontend should be able to communicate with backend without CORS issues")
+            else:
+                logger.warning(f"⚠️  {total - passed} test(s) failed")
+                
+                if not results.get("CORS Configuration", True):
+                    logger.error("❌ CORS configuration issues detected - frontend may be blocked")
+                if not results.get("Authentication API", True):
+                    logger.error("❌ Authentication API issues detected - login may not work")
+                if not results.get("Test Users Verification", True):
+                    logger.error("❌ Test users verification failed - protected endpoints may not work")
+                
+    except KeyboardInterrupt:
+        logger.info("\n⏹️  Testing interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"💥 Unexpected error during testing: {str(e)}")
+        sys.exit(1)
+
 if __name__ == "__main__":
     # Check if we should run specific tests
     if len(sys.argv) > 1:
@@ -4520,14 +4646,17 @@ if __name__ == "__main__":
             asyncio.run(main_erp_tests())
         elif sys.argv[1] == "review":
             asyncio.run(main_review_request_tests())
+        elif sys.argv[1] == "cors":
+            asyncio.run(main_cors_auth_tests())
         else:
-            logger.info("Usage: python backend_test.py [ai|2fa|admin|erp|review]")
+            logger.info("Usage: python backend_test.py [ai|2fa|admin|erp|review|cors]")
             logger.info("  ai     - Run AI function tests only")
             logger.info("  2fa    - Run 2FA system tests only")
             logger.info("  admin  - Run Admin Dashboard tests only")
             logger.info("  erp    - Run comprehensive ERP system tests only")
             logger.info("  review - Run tests for specific review request endpoints")
-            logger.info("  (no args) - Run authentication tests")
+            logger.info("  cors   - Run CORS and Authentication tests after CORS fix")
+            logger.info("  (no args) - Run CORS and Authentication tests")
             sys.exit(1)
     else:
-        asyncio.run(main_review_request_tests())
+        asyncio.run(main_cors_auth_tests())
