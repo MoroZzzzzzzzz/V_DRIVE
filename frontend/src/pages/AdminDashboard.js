@@ -56,10 +56,10 @@ const AdminDashboard = () => {
   // Tabs configuration
   const tabs = [
     { id: 'overview', label: 'Обзор', icon: BarChart3, count: 0 },
-    { id: 'users', label: 'Пользователи', icon: Users, count: users.filter(u => u.status === 'pending').length },
-    { id: 'moderation', label: 'Модерация', icon: Shield, count: pendingItems.length },
+    { id: 'users', label: 'Пользователи', icon: Users, count: (users || []).filter(u => u.status === 'pending').length },
+    { id: 'moderation', label: 'Модерация', icon: Shield, count: (pendingItems || []).length },
     { id: 'analytics', label: 'Аналитика', icon: PieChart, count: 0 },
-    { id: 'reports', label: 'Отчеты', icon: BarChart3, count: reports.filter(r => r.status === 'completed').length },
+    { id: 'reports', label: 'Отчеты', icon: BarChart3, count: (reports || []).filter(r => r.status === 'completed').length },
     { id: 'settings', label: 'Настройки', icon: Settings, count: 0 }
   ];
 
