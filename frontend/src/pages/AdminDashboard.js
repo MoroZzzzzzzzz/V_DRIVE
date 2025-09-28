@@ -467,7 +467,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = (users || []).filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = userFilter === 'all' || user.status === userFilter || user.role === userFilter;
