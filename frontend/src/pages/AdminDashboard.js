@@ -238,7 +238,7 @@ const AdminDashboard = () => {
       const usersResponse = await axios.get(`${backendUrl}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers(usersResponse.data);
+      setUsers(usersResponse.data.users || []);
       
       // Load reports data
       const reportsResponse = await axios.get(`${backendUrl}/api/admin/reports`, {
