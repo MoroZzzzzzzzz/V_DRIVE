@@ -142,24 +142,27 @@ class VelesDriveAPITester:
         
         success = True
         
-        # Create the specific test users mentioned in the review request
+        # Create fresh test users for admin testing (avoid 2FA issues)
+        import uuid
+        unique_suffix = uuid.uuid4().hex[:6]
+        
         specific_users = [
             {
-                "email": "admin@test.com",
+                "email": f"admin_test_{unique_suffix}@test.com",
                 "password": "testpass123",
                 "full_name": "Admin User",
                 "phone": "+7-900-000-0001",
                 "role": "admin"
             },
             {
-                "email": "buyer@test.com",
+                "email": f"buyer_test_{unique_suffix}@test.com",
                 "password": "testpass123",
                 "full_name": "Buyer User",
                 "phone": "+7-900-000-0002",
                 "role": "buyer"
             },
             {
-                "email": "dealer@test.com",
+                "email": f"dealer_test_{unique_suffix}@test.com",
                 "password": "testpass123",
                 "full_name": "Dealer User",
                 "phone": "+7-900-000-0003",
