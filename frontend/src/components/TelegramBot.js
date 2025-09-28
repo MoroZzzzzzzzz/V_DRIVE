@@ -25,61 +25,88 @@ const TelegramBot = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      checkTelegramConnection();
-      generateConnectionCode();
+      loadTelegramStatus();
     }
   }, [isAuthenticated]);
 
-  const checkTelegramConnection = async () => {
+  const loadTelegramStatus = async () => {
     try {
-      // Mock check - in real app would check user's telegram connection status
-      const connected = localStorage.getItem(`telegram_connected_${user?.id}`);
-      setBotConnected(connected === 'true');
+      const response = await axios.get(`${backendUrl}/api/telegram/status`, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      setTelegramStatus(response.data);
     } catch (error) {
-      console.error('Error checking Telegram connection:', error);
+      console.error('Error loading Telegram status:', error);
     }
   };
 
-  const generateConnectionCode = () => {
-    // Generate a unique 6-digit code for user verification
-    const code = Math.random().toString().substr(2, 6);
-    setConnectionCode(code);
-  };
-
-  const connectTelegram = async () => {
+  const generateConnectionCode = async () => {
     try {
-      // In real implementation, this would:
-      // 1. Send connection request to backend
-      // 2. Backend would store the connection code
-      // 3. User goes to Telegram bot and enters the code
-      // 4. Bot verifies code and links accounts
+      setLoading(true);
+      const response = await axios.post(`${backendUrl}/api/telegram/generate-code`, {}, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
       
-      const telegramUrl = `https://t.me/${botUsername.replace('@', '')}?start=${connectionCode}`;
+      const { connection_code, bot_username } = response.data;
+      setConnectionCode(connection_code);
+      
+      // Open Telegram bot
+      const telegramUrl = `https://t.me/${bot_username}?start=${connection_code}`;
       window.open(telegramUrl, '_blank');
       
-      toast.success('Переходим к Telegram боту для подключения');
-      
-      // Simulate connection after 5 seconds (for demo)
-      setTimeout(() => {
-        setBotConnected(true);
-        localStorage.setItem(`telegram_connected_${user?.id}`, 'true');
-        toast.success('Telegram аккаунт успешно подключен!');
-      }, 5000);
+      toast.success('Код подключения создан! Перейдите в Telegram и отправьте команду /start');
+      setShowConnectionDialog(true);
       
     } catch (error) {
-      console.error('Error connecting to Telegram:', error);
-      toast.error('Ошибка подключения к Telegram');
+      console.error('Error generating connection code:', error);
+      toast.error(error.response?.data?.detail || 'Ошибка создания кода подключения');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectTelegramWithCode = async () => {
+    try {
+      setLoading(true);
+      await axios.post(`${backendUrl}/api/telegram/connect`, {
+        connection_code: connectionCode
+      }, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      
+      setTelegramStatus(prev => ({ ...prev, connected: true }));
+      setShowConnectionDialog(false);
+      toast.success('Telegram аккаунт успешно подключен!');
+      await loadTelegramStatus(); // Refresh status
+      
+    } catch (error) {
+      console.error('Error connecting Telegram:', error);
+      toast.error(error.response?.data?.detail || 'Ошибка подключения Telegram');
+    } finally {
+      setLoading(false);
     }
   };
 
   const disconnectTelegram = async () => {
     try {
-      setBotConnected(false);
-      localStorage.removeItem(`telegram_connected_${user?.id}`);
+      setLoading(true);
+      await axios.post(`${backendUrl}/api/telegram/disconnect`, {}, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      
+      setTelegramStatus({
+        connected: false,
+        username: null,
+        connected_at: null,
+        notifications_enabled: true
+      });
       toast.success('Telegram аккаунт отключен');
+      
     } catch (error) {
       console.error('Error disconnecting Telegram:', error);
       toast.error('Ошибка отключения Telegram');
+    } finally {
+      setLoading(false);
     }
   };
 
