@@ -427,14 +427,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const exportReport = async (reportType) => {
-    try {
-      toast.success(`Отчет "${reportType}" экспортирован`);
-    } catch (error) {
-      toast.error('Ошибка при экспорте отчета');
-    }
-  };
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
