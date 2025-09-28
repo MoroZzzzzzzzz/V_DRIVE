@@ -2020,8 +2020,13 @@ async def regenerate_backup_codes(
         raise HTTPException(status_code=400, detail="2FA not enabled")
     
     try:
+        # Get user data with password hash
+        user_data = await db.users.find_one({"id": current_user.id})
+        if not user_data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
         # Verify password
-        if not pwd_context.verify(password, current_user.password_hash):
+        if not pwd_context.verify(password, user_data["password"]):
             raise HTTPException(status_code=400, detail="Invalid password")
         
         # Generate new backup codes
