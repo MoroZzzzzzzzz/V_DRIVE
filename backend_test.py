@@ -1091,6 +1091,178 @@ class VelesDriveAPITester:
         
         return success
 
+    async def test_admin_dashboard_extended(self) -> bool:
+        """Test extended Admin Dashboard functionality"""
+        logger.info("🏛️ Testing Extended Admin Dashboard...")
+        
+        # Use existing admin token or create one
+        if "admin" not in self.auth_tokens:
+            await self.test_admin_panel()  # This will create admin user
+        
+        if "admin" not in self.auth_tokens:
+            logger.error("❌ No admin token available for extended testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("admin")
+        
+        # Test 1: Admin Stats Endpoint
+        logger.info("Testing Admin Stats Endpoint...")
+        result = await self.make_request("GET", "/admin/stats", headers=headers)
+        
+        if result["status"] == 200:
+            stats = result["data"]
+            logger.info("✅ Admin stats retrieved successfully")
+            
+            # Verify expected fields
+            expected_fields = ["total_users", "total_dealers", "total_buyers", "total_cars", 
+                             "blocked_users", "new_registrations", "monthly_revenue"]
+            for field in expected_fields:
+                if field in stats:
+                    logger.info(f"   {field}: {stats[field]}")
+                else:
+                    logger.warning(f"⚠️  Missing field in stats: {field}")
+        else:
+            logger.error(f"❌ Admin stats failed: {result}")
+            success = False
+        
+        # Test 2: Admin Users Endpoint with filtering
+        logger.info("Testing Admin Users Endpoint...")
+        
+        # Test basic user list
+        result = await self.make_request("GET", "/admin/users", headers=headers)
+        
+        if result["status"] == 200:
+            users_data = result["data"]
+            logger.info(f"✅ Retrieved {len(users_data['users'])} users")
+            logger.info(f"   Total users: {users_data['total']}")
+        else:
+            logger.error(f"❌ Admin users list failed: {result}")
+            success = False
+        
+        # Test filtering by role
+        for role in ["buyer", "dealer", "admin"]:
+            result = await self.make_request("GET", "/admin/users", 
+                                           {"role_filter": role}, headers)
+            
+            if result["status"] == 200:
+                filtered_users = result["data"]
+                logger.info(f"✅ Role filter '{role}': {len(filtered_users['users'])} users")
+            else:
+                logger.error(f"❌ Role filtering failed for '{role}': {result}")
+                success = False
+        
+        # Test search functionality
+        if self.test_users.get("buyer"):
+            search_term = self.test_users["buyer"]["full_name"].split()[0]
+            result = await self.make_request("GET", "/admin/users", 
+                                           {"search": search_term}, headers)
+            
+            if result["status"] == 200:
+                search_results = result["data"]
+                logger.info(f"✅ Search for '{search_term}': {len(search_results['users'])} users")
+            else:
+                logger.error(f"❌ User search failed: {result}")
+                success = False
+        
+        # Test 3: User Management Endpoints
+        logger.info("Testing User Management Endpoints...")
+        
+        # Find a test user to manage
+        test_user_id = None
+        if "buyer" in self.test_users:
+            users_result = await self.make_request("GET", "/admin/users", headers=headers)
+            if users_result["status"] == 200:
+                buyer_email = self.test_users["buyer"]["email"]
+                buyer_user = next((u for u in users_result["data"]["users"] 
+                                 if u["email"] == buyer_email), None)
+                if buyer_user:
+                    test_user_id = buyer_user["id"]
+        
+        if test_user_id:
+            # Test user blocking
+            result = await self.make_request("POST", f"/admin/users/{test_user_id}/block", 
+                                           {"reason": "Test blocking for admin testing"}, headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ User blocked successfully")
+                
+                # Test user unblocking
+                result = await self.make_request("POST", f"/admin/users/{test_user_id}/unblock", 
+                                               headers=headers)
+                
+                if result["status"] == 200:
+                    logger.info("✅ User unblocked successfully")
+                else:
+                    logger.error(f"❌ User unblocking failed: {result}")
+                    success = False
+            else:
+                logger.error(f"❌ User blocking failed: {result}")
+                success = False
+        else:
+            logger.warning("⚠️  No test user found for management testing")
+        
+        # Test 4: Admin Reports Endpoint
+        logger.info("Testing Admin Reports Endpoint...")
+        result = await self.make_request("GET", "/admin/reports", headers=headers)
+        
+        if result["status"] == 200:
+            reports_data = result["data"]
+            reports = reports_data["reports"]
+            logger.info(f"✅ Retrieved {len(reports)} admin reports")
+            
+            # Verify report types
+            report_types = [report["type"] for report in reports]
+            expected_types = ["security", "sales", "system"]
+            for report_type in expected_types:
+                if report_type in report_types:
+                    logger.info(f"   Found {report_type} report")
+                else:
+                    logger.warning(f"⚠️  Missing {report_type} report")
+        else:
+            logger.error(f"❌ Admin reports failed: {result}")
+            success = False
+        
+        # Test 5: Report Export Endpoint
+        logger.info("Testing Report Export Endpoint...")
+        
+        export_types = ["security", "sales", "system"]
+        for export_type in export_types:
+            result = await self.make_request("POST", f"/admin/reports/{export_type}/export", 
+                                           headers=headers)
+            
+            if result["status"] == 200:
+                export_data = result["data"]
+                logger.info(f"✅ {export_type} report export successful")
+                logger.info(f"   Download URL: {export_data['download_url']}")
+            else:
+                logger.error(f"❌ {export_type} report export failed: {result}")
+                success = False
+        
+        # Test 6: Access Control - Non-admin users should be blocked
+        logger.info("Testing Access Control...")
+        
+        if "buyer" in self.auth_tokens:
+            buyer_headers = self.get_auth_headers("buyer")
+            
+            # Test that buyer cannot access admin endpoints
+            admin_endpoints = [
+                "/admin/stats",
+                "/admin/users", 
+                "/admin/reports"
+            ]
+            
+            for endpoint in admin_endpoints:
+                result = await self.make_request("GET", endpoint, headers=buyer_headers)
+                
+                if result["status"] == 403:
+                    logger.info(f"✅ Access properly blocked for buyer on {endpoint}")
+                else:
+                    logger.error(f"❌ Buyer should not access {endpoint}: {result}")
+                    success = False
+        
+        return success
+
     async def test_vehicle_types_system(self) -> bool:
         """Test extended vehicle support (cars, motorcycles, boats, planes)"""
         logger.info("🚁 Testing Vehicle Types System...")
