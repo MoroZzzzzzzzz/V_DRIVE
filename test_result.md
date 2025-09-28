@@ -596,6 +596,18 @@ VELES DRIVE - современная платформа для автомоби�
         agent: "testing"
         comment: "✅ AI аналитика (/api/ai/market-insights) работает для админов: генерирует рыночные инсайты и тренды на основе данных продаж и автомобилей, проверяет permissions (только админы), возвращает структурированную аналитику для принятия бизнес-решений."
 
+  - task: "Telegram Bot полная реализация"
+    implemented: true
+    working: "NA"
+    file: "backend/telegram_bot.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Создан полный Telegram Bot для VELES DRIVE с 25+ командами: /start, /help, /search, /favorites, /profile, /notifications, /connect, /disconnect. Поддержка поиска по всем типам транспорта (/search motorcycle BMW), управление избранным, профиль с статистикой, настройки уведомлений. Backend endpoints: /api/telegram/connect, /api/telegram/disconnect, /api/telegram/status, /api/telegram/generate-code, /api/telegram/send-notification, /api/telegram/users. Frontend: TelegramBot.js компонент с real API integration, TelegramBotPage.js (/telegram) с UI подключения, добавлена ссылка в ProfilePage. Startup script: start_telegram_bot.py. Готов к тестированию."
+
   - task: "Расширение типов транспорта"
     implemented: true
     working: true
