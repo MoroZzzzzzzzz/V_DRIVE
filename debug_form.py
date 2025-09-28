@@ -22,7 +22,7 @@ async def test_form_data():
         for field in form_data._fields:
             print(f"  {field}")
         
-        url = "https://veles-auto-hub.preview.emergentagent.com/api/comparisons"
+        url = "https://project-continue-16.preview.emergentagent.com/api/comparisons"
         
         async with session.post(url, data=form_data, headers=headers) as response:
             print(f"Status: {response.status}")
