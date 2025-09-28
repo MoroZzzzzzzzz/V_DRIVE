@@ -617,8 +617,18 @@ const CatalogPage = () => {
                 </div>
               ) : (
                 <div className="text-center py-16">
-                  <i className="fas fa-car text-6xl text-gray-600 mb-4"></i>
-                  <h3 className="text-2xl font-bold text-white mb-2">Автомобили не найдены</h3>
+                  <i className={`fas text-6xl text-gray-600 mb-4 ${
+                    filters.vehicleType === 'car' ? 'fa-car' :
+                    filters.vehicleType === 'motorcycle' ? 'fa-motorcycle' :
+                    filters.vehicleType === 'boat' ? 'fa-ship' :
+                    'fa-plane'
+                  }`}></i>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    {filters.vehicleType === 'car' ? 'Автомобили' :
+                     filters.vehicleType === 'motorcycle' ? 'Мотоциклы' :
+                     filters.vehicleType === 'boat' ? 'Лодки' :
+                     'Самолеты'} не найдены
+                  </h3>
                   <p className="text-gray-400 mb-6">Попробуйте изменить параметры поиска</p>
                   <Button 
                     className="btn-outline-gold"
