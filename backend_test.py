@@ -3036,6 +3036,304 @@ class VelesDriveAPITester:
         logger.info("✅ MongoDB Collections - Verified through API responses")
         
         return success
+
+    async def test_new_admin_endpoints(self) -> bool:
+        """Test NEW ADMIN ENDPOINTS as specified in review request"""
+        logger.info("🏛️ ТЕСТИРОВАНИЕ НОВЫХ ADMIN ENDPOINTS...")
+        
+        # Ensure we have admin credentials
+        if "specific_admin" not in self.auth_tokens:
+            await self.create_specific_admin_test_users()
+        
+        if "specific_admin" not in self.auth_tokens:
+            logger.error("❌ No admin token available for new admin endpoints testing")
+            return False
+        
+        success = True
+        admin_headers = self.get_auth_headers("specific_admin")
+        
+        # Test 1: GET /api/admin/stats - получение статистики админа
+        logger.info("🔍 Testing GET /api/admin/stats...")
+        result = await self.make_request("GET", "/admin/stats", headers=admin_headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ GET /api/admin/stats - Working correctly")
+            stats = result["data"]
+            logger.info(f"   📊 Total users: {stats.get('total_users', 'N/A')}")
+            logger.info(f"   📊 Total dealers: {stats.get('total_dealers', 'N/A')}")
+            logger.info(f"   📊 Total cars: {stats.get('total_cars', 'N/A')}")
+            logger.info(f"   📊 Revenue: {stats.get('revenue', 'N/A')} RUB")
+        else:
+            logger.error(f"❌ GET /api/admin/stats failed: {result}")
+            success = False
+        
+        # Test 2: GET /api/admin/users - список всех пользователей для админа
+        logger.info("🔍 Testing GET /api/admin/users...")
+        result = await self.make_request("GET", "/admin/users", headers=admin_headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ GET /api/admin/users - Working correctly")
+            users_data = result["data"]
+            if isinstance(users_data, list):
+                user_count = len(users_data)
+                users_list = users_data
+            elif isinstance(users_data, dict) and "users" in users_data:
+                user_count = len(users_data["users"])
+                users_list = users_data["users"]
+            else:
+                user_count = 0
+                users_list = []
+            logger.info(f"   👥 Retrieved {user_count} users")
+        else:
+            logger.error(f"❌ GET /api/admin/users failed: {result}")
+            success = False
+            users_list = []
+        
+        # Find test user for management operations
+        test_user_id = None
+        if "specific_buyer" in self.test_users and users_list:
+            buyer_email = self.test_users["specific_buyer"]["email"]
+            buyer_user = next((u for u in users_list if u["email"] == buyer_email), None)
+            if buyer_user:
+                test_user_id = buyer_user["id"]
+        
+        if test_user_id:
+            # Test 3: POST /api/admin/users/{user_id}/block - блокировка пользователя
+            logger.info(f"🔍 Testing POST /api/admin/users/{test_user_id}/block...")
+            block_data = {"reason": "Testing admin user blocking functionality"}
+            result = await self.make_request("POST", f"/admin/users/{test_user_id}/block", 
+                                           block_data, admin_headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ POST /api/admin/users/{user_id}/block - Working correctly")
+            else:
+                logger.error(f"❌ POST /api/admin/users/{{user_id}}/block failed: {result}")
+                success = False
+            
+            # Test 4: POST /api/admin/users/{user_id}/unblock - разблокировка пользователя
+            logger.info(f"🔍 Testing POST /api/admin/users/{test_user_id}/unblock...")
+            result = await self.make_request("POST", f"/admin/users/{test_user_id}/unblock", 
+                                           headers=admin_headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ POST /api/admin/users/{user_id}/unblock - Working correctly")
+            else:
+                logger.error(f"❌ POST /api/admin/users/{{user_id}}/unblock failed: {result}")
+                success = False
+            
+            # Test 5: POST /api/admin/users/{user_id}/approve - одобрение пользователя
+            logger.info(f"🔍 Testing POST /api/admin/users/{test_user_id}/approve...")
+            result = await self.make_request("POST", f"/admin/users/{test_user_id}/approve", 
+                                           headers=admin_headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ POST /api/admin/users/{user_id}/approve - Working correctly")
+            else:
+                logger.error(f"❌ POST /api/admin/users/{{user_id}}/approve failed: {result}")
+                success = False
+        else:
+            logger.warning("⚠️  No test user found for user management testing")
+        
+        # Test 6: GET /api/admin/reports - получение отчетов
+        logger.info("🔍 Testing GET /api/admin/reports...")
+        result = await self.make_request("GET", "/admin/reports", headers=admin_headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ GET /api/admin/reports - Working correctly")
+            reports_data = result["data"]
+            if isinstance(reports_data, dict) and "reports" in reports_data:
+                reports = reports_data["reports"]
+                logger.info(f"   📋 Retrieved {len(reports)} system reports")
+            else:
+                logger.info(f"   📋 Reports structure: {type(reports_data)}")
+        else:
+            logger.error(f"❌ GET /api/admin/reports failed: {result}")
+            success = False
+        
+        # Test 7: POST /api/admin/reports/{report_type}/export - экспорт отчетов
+        logger.info("🔍 Testing POST /api/admin/reports/{report_type}/export...")
+        export_types = ["security", "sales", "system"]
+        
+        for export_type in export_types:
+            result = await self.make_request("POST", f"/admin/reports/{export_type}/export", 
+                                           headers=admin_headers)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ POST /api/admin/reports/{export_type}/export - Working correctly")
+                export_data = result["data"]
+                if "download_url" in export_data:
+                    logger.info(f"   📥 Download URL: {export_data['download_url']}")
+            else:
+                logger.error(f"❌ POST /api/admin/reports/{export_type}/export failed: {result}")
+                success = False
+        
+        # Test 8: POST /api/admin/moderation/approve - одобрение модерируемого контента
+        logger.info("🔍 Testing POST /api/admin/moderation/approve...")
+        approve_data = {
+            "content_type": "car",
+            "content_id": "test_car_id",
+            "moderator_notes": "Content approved for testing"
+        }
+        result = await self.make_request("POST", "/admin/moderation/approve", 
+                                       approve_data, admin_headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ POST /api/admin/moderation/approve - Working correctly")
+        else:
+            logger.info(f"ℹ️  POST /api/admin/moderation/approve - Expected for test content: {result}")
+        
+        # Test 9: POST /api/admin/moderation/reject - отклонение модерируемого контента
+        logger.info("🔍 Testing POST /api/admin/moderation/reject...")
+        reject_data = {
+            "content_type": "car",
+            "content_id": "test_car_id",
+            "reason": "Content rejected for testing",
+            "moderator_notes": "Test rejection"
+        }
+        result = await self.make_request("POST", "/admin/moderation/reject", 
+                                       reject_data, admin_headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ POST /api/admin/moderation/reject - Working correctly")
+        else:
+            logger.info(f"ℹ️  POST /api/admin/moderation/reject - Expected for test content: {result}")
+        
+        return success
+
+    async def test_telegram_bot_endpoints_comprehensive(self) -> bool:
+        """Test EXISTING TELEGRAM BOT ENDPOINTS as specified in review request"""
+        logger.info("🤖 ТЕСТИРОВАНИЕ TELEGRAM BOT ENDPOINTS...")
+        
+        # Ensure we have test users
+        if "specific_admin" not in self.auth_tokens:
+            await self.create_specific_admin_test_users()
+        
+        success = True
+        
+        # Test with different user roles as specified in review request
+        test_roles = [
+            ("admin", "admin@test.com"),
+            ("dealer", "dealer@test.com"), 
+            ("buyer", "buyer@test.com")
+        ]
+        
+        for role, email in test_roles:
+            logger.info(f"🔍 Testing Telegram endpoints for {role} ({email})...")
+            
+            # Login with specific test user
+            login_data = {"email": email, "password": "testpass123"}
+            login_result = await self.make_request("POST", "/auth/login", login_data)
+            
+            if login_result["status"] != 200:
+                logger.error(f"❌ Failed to login {role}: {login_result}")
+                success = False
+                continue
+            
+            headers = {"Authorization": f"Bearer {login_result['data']['access_token']}"}
+            
+            # Test 10: GET /api/telegram/status - статус подключения Telegram
+            logger.info(f"🔍 Testing GET /api/telegram/status for {role}...")
+            result = await self.make_request("GET", "/telegram/status", headers=headers)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ GET /api/telegram/status - Working for {role}")
+                status_data = result["data"]
+                logger.info(f"   📱 Connected: {status_data.get('connected', False)}")
+            else:
+                logger.error(f"❌ GET /api/telegram/status failed for {role}: {result}")
+                success = False
+            
+            # Test 11: POST /api/telegram/generate-code - создание кода подключения
+            logger.info(f"🔍 Testing POST /api/telegram/generate-code for {role}...")
+            result = await self.make_request("POST", "/telegram/generate-code", headers=headers)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ POST /api/telegram/generate-code - Working for {role}")
+                code_data = result["data"]
+                logger.info(f"   🔑 Code: {code_data.get('connection_code', 'N/A')}")
+                logger.info(f"   ⏰ Expires: {code_data.get('expires_at', 'N/A')}")
+                
+                # Store code for connection test
+                if role == "buyer":
+                    self.test_data["telegram_code"] = code_data.get("connection_code")
+            else:
+                logger.error(f"❌ POST /api/telegram/generate-code failed for {role}: {result}")
+                success = False
+            
+            # Test 12: POST /api/telegram/connect - подключение Telegram аккаунта
+            if role == "buyer" and self.test_data.get("telegram_code"):
+                logger.info(f"🔍 Testing POST /api/telegram/connect for {role}...")
+                connect_data = {
+                    "connection_code": self.test_data["telegram_code"],
+                    "chat_id": "123456789"  # Mock chat ID
+                }
+                
+                result = await self.make_request("POST", "/telegram/connect", connect_data, headers)
+                
+                if result["status"] == 200:
+                    logger.info(f"✅ POST /api/telegram/connect - Working for {role}")
+                else:
+                    logger.info(f"ℹ️  POST /api/telegram/connect - Expected behavior without real bot: {result}")
+        
+        # Test admin-only endpoints
+        if "specific_admin" in self.auth_tokens:
+            logger.info("🔍 Testing admin-only Telegram endpoints...")
+            admin_headers = self.get_auth_headers("specific_admin")
+            
+            # Test admin send notification
+            notification_data = {
+                "user_id": "test_user_id",
+                "message": "Test notification from admin",
+                "notification_type": "info"
+            }
+            
+            result = await self.make_request("POST", "/telegram/send-notification", 
+                                           notification_data, admin_headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ Admin Telegram send notification - Working")
+            else:
+                logger.info(f"ℹ️  Admin Telegram send notification - Expected without real bot: {result}")
+            
+            # Test admin get users
+            result = await self.make_request("GET", "/telegram/users", headers=admin_headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ Admin Telegram get users - Working")
+                users_data = result["data"]
+                if isinstance(users_data, dict) and "users" in users_data:
+                    user_count = len(users_data["users"])
+                    logger.info(f"   👥 Connected users: {user_count}")
+            else:
+                logger.error(f"❌ Admin Telegram get users failed: {result}")
+                success = False
+        
+        # Test access control - ensure only admins can access admin endpoints
+        logger.info("🔒 Testing access control for Telegram admin endpoints...")
+        
+        # Test with buyer credentials
+        buyer_login = {"email": "buyer@test.com", "password": "testpass123"}
+        buyer_result = await self.make_request("POST", "/auth/login", buyer_login)
+        
+        if buyer_result["status"] == 200:
+            buyer_headers = {"Authorization": f"Bearer {buyer_result['data']['access_token']}"}
+            
+            # Buyer should get HTTP 403 for admin endpoints
+            admin_endpoints = [
+                ("/telegram/send-notification", "POST", {"user_id": "test", "message": "test"}),
+                ("/telegram/users", "GET", None)
+            ]
+            
+            for endpoint, method, data in admin_endpoints:
+                result = await self.make_request(method, endpoint, data, buyer_headers)
+                
+                if result["status"] == 403:
+                    logger.info(f"✅ {endpoint} - Access properly blocked for buyer (HTTP 403)")
+                else:
+                    logger.error(f"❌ {endpoint} - Buyer should get HTTP 403, got: {result['status']}")
+                    success = False
+        
+        return success
     
     async def run_all_tests(self) -> Dict[str, bool]:
         """Run all API tests"""
