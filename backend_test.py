@@ -189,7 +189,14 @@ class VelesDriveAPITester:
                 if login_result["status"] == 200:
                     logger.info(f"✅ Logged in existing {user_data['role']}: {user_data['email']}")
                     self.test_users[f"specific_{user_data['role']}"] = user_data
-                    self.auth_tokens[f"specific_{user_data['role']}"] = login_result["data"]["access_token"]
+                    # Handle both possible response structures
+                    if "access_token" in login_result["data"]:
+                        self.auth_tokens[f"specific_{user_data['role']}"] = login_result["data"]["access_token"]
+                    elif "token" in login_result["data"]:
+                        self.auth_tokens[f"specific_{user_data['role']}"] = login_result["data"]["token"]
+                    else:
+                        logger.error(f"❌ No access token found in login response: {login_result['data']}")
+                        success = False
                 else:
                     logger.error(f"❌ Failed to login existing {user_data['role']}: {login_result}")
                     success = False
