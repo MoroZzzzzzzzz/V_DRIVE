@@ -58,14 +58,36 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
             {navigationItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
-              >
-                <i className={`${item.icon} mr-2`}></i>
-                {item.label}
-              </Link>
+              item.submenu ? (
+                <div key={item.label} className="relative group">
+                  <button className="nav-link flex items-center">
+                    <i className={`${item.icon} mr-2`}></i>
+                    {item.label}
+                    <i className="fas fa-chevron-down ml-1 text-xs group-hover:rotate-180 transition-transform"></i>
+                  </button>
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    {item.submenu.map((subItem) => (
+                      <Link
+                        key={subItem.path}
+                        to={subItem.path}
+                        className="block px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg transition-colors"
+                      >
+                        <span className="mr-2">{subItem.label.split(' ')[0]}</span>
+                        {subItem.label.split(' ').slice(1).join(' ')}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-link ${isActive(item.path) ? 'active' : ''}`}
+                >
+                  <i className={`${item.icon} mr-2`}></i>
+                  {item.label}
+                </Link>
+              )
             ))}
             
             {user && userNavigationItems.map((item) => (
