@@ -2213,7 +2213,11 @@ class VelesDriveAPITester:
                 
                 if login_result["status"] == 200:
                     logger.info(f"✅ {role.title()} login successful")
-                    self.auth_tokens[role] = login_result["data"]["access_token"]
+                    if "access_token" in login_result["data"]:
+                        self.auth_tokens[role] = login_result["data"]["access_token"]
+                    else:
+                        logger.error(f"❌ No access token in login response: {login_result}")
+                        success = False
                 else:
                     logger.error(f"❌ {role.title()} login failed: {login_result}")
                     success = False
