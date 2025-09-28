@@ -404,7 +404,7 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleApprove = async (itemId, type) => {
+  const handleApprovePending = async (itemId, type) => {
     try {
       setPendingItems(prev => prev.filter(item => item.id !== itemId));
       toast.success(`${type === 'car' ? 'Автомобиль' : type === 'dealer' ? 'Дилер' : 'Отзыв'} одобрен`);
