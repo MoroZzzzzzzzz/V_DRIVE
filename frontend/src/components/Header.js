@@ -20,7 +20,16 @@ const Header = () => {
 
   const navigationItems = [
     { path: '/', label: 'Главная', icon: 'fas fa-home' },
-    { path: '/catalog', label: 'Каталог', icon: 'fas fa-car' },
+    { 
+      label: 'Каталог', 
+      icon: 'fas fa-car',
+      submenu: [
+        { path: '/catalog?type=car', label: '🚗 Автомобили', icon: 'fas fa-car' },
+        { path: '/catalog?type=motorcycle', label: '🏍️ Мотоциклы', icon: 'fas fa-motorcycle' },
+        { path: '/catalog?type=boat', label: '🛥️ Лодки', icon: 'fas fa-ship' },
+        { path: '/catalog?type=plane', label: '✈️ Самолеты', icon: 'fas fa-plane' },
+      ]
+    },
     { path: '/premium', label: 'Премиум', icon: 'fas fa-crown' },
     { path: '/auctions', label: 'Аукционы', icon: 'fas fa-gavel' },
     { path: '/dealers', label: 'Дилеры', icon: 'fas fa-store' },
