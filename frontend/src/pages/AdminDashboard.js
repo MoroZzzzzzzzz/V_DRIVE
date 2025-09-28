@@ -210,12 +210,13 @@ const AdminDashboard = () => {
   const loadAdminData = async () => {
     try {
       setLoading(true);
-      // Load admin statistics
+      // In a real implementation, these would be API calls
       setStats(mockStats);
+      setUsers(mockUsers);
       setPendingItems(mockPendingItems);
+      setReports(mockReports);
     } catch (error) {
-      console.error('Error loading admin data:', error);
-      toast.error('Ошибка загрузки данных');
+      toast.error('Ошибка загрузки данных администратора');
     } finally {
       setLoading(false);
     }
