@@ -1195,14 +1195,25 @@ class VelesDriveAPITester:
             stats = result["data"]
             logger.info("✅ Admin stats retrieved successfully")
             
-            # Verify expected fields
-            expected_fields = ["total_users", "total_dealers", "total_buyers", "total_cars", 
-                             "blocked_users", "new_registrations", "monthly_revenue"]
-            for field in expected_fields:
-                if field in stats:
-                    logger.info(f"   {field}: {stats[field]}")
-                else:
-                    logger.warning(f"⚠️  Missing field in stats: {field}")
+            # Verify expected fields - check both flat structure and nested structure
+            if "overview" in stats:
+                # Nested structure
+                overview = stats["overview"]
+                monthly = stats.get("monthly_stats", {})
+                logger.info(f"   total_users: {overview.get('total_users', 'N/A')}")
+                logger.info(f"   total_dealers: {overview.get('total_dealers', 'N/A')}")
+                logger.info(f"   total_cars: {overview.get('total_cars', 'N/A')}")
+                logger.info(f"   new_users: {monthly.get('new_users', 'N/A')}")
+                logger.info(f"   revenue: {monthly.get('revenue', 'N/A')}")
+            else:
+                # Flat structure
+                expected_fields = ["total_users", "total_dealers", "total_buyers", "total_cars", 
+                                 "blocked_users", "new_registrations", "monthly_revenue"]
+                for field in expected_fields:
+                    if field in stats:
+                        logger.info(f"   {field}: {stats[field]}")
+                    else:
+                        logger.warning(f"⚠️  Missing field in stats: {field}")
         else:
             logger.error(f"❌ Admin stats failed: {result}")
             success = False
