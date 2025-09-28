@@ -410,13 +410,19 @@ const AdminDashboard = () => {
 
   const handleApproveUser = async (userId) => {
     try {
+      await axios.post(`${backendUrl}/api/admin/users/${userId}/approve`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update local state
       setUsers(prev => prev.map(user => 
-        user.id === userId 
-          ? { ...user, status: 'active' }
-          : user
+        user.id === userId ? { ...user, status: 'active' } : user
       ));
+      
       toast.success('Пользователь одобрен');
+      await loadAdminData(); // Refresh data
     } catch (error) {
+      console.error('Error approving user:', error);
       toast.error('Ошибка при одобрении пользователя');
     }
   };
