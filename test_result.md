@@ -596,6 +596,18 @@ VELES DRIVE - современная платформа для автомоби�
         agent: "testing"
         comment: "✅ AI аналитика (/api/ai/market-insights) работает для админов: генерирует рыночные инсайты и тренды на основе данных продаж и автомобилей, проверяет permissions (только админы), возвращает структурированную аналитику для принятия бизнес-решений."
 
+  - task: "Двухфакторная аутентификация (2FA) backend"
+    implemented: true
+    working: true
+    file: "backend/security.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Backend 2FA реализован в security.py с setup, verify, disable endpoints. Интеграция в server.py с User моделью и login endpoint. Библиотеки pyotp и qrcode установлены."
+
 ## metadata:
   created_by: "main_agent"
   version: "1.0"
