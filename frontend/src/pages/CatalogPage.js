@@ -408,7 +408,14 @@ const CatalogPage = () => {
           {loading ? (
             <div className="text-center py-16">
               <div className="loading-spinner mx-auto mb-4"></div>
-              <p className="text-gray-400">Поиск автомобилей...</p>
+              <p className="text-gray-400">
+                Поиск {
+                  filters.vehicleType === 'car' ? 'автомобилей' :
+                  filters.vehicleType === 'motorcycle' ? 'мотоциклов' :
+                  filters.vehicleType === 'boat' ? 'лодок' :
+                  'самолетов'
+                }...
+              </p>
             </div>
           ) : (
             <>
