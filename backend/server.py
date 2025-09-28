@@ -2399,10 +2399,6 @@ async def export_report(
         logger.error(f"Export report error: {e}")
         raise HTTPException(status_code=500, detail="Failed to export report")
 
-# Include routers after all routes are defined
-app.include_router(api_router)
-app.include_router(payments_router)
-
 # Telegram Bot Integration Endpoints
 @api_router.post("/telegram/connect")
 async def connect_telegram_account(
@@ -2617,6 +2613,10 @@ async def get_telegram_users(
     except Exception as e:
         logger.error(f"Get Telegram users error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get Telegram users")
+
+# Include routers after all routes are defined
+app.include_router(api_router)
+app.include_router(payments_router)
 
 # CORS middleware
 app.add_middleware(
