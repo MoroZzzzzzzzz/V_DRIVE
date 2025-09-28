@@ -135,6 +135,170 @@ class VelesDriveAPITester:
         except Exception as e:
             logger.error(f"❌ API connectivity test failed: {str(e)}")
             return False
+
+    async def test_cors_configuration(self) -> bool:
+        """Test CORS configuration for frontend domain"""
+        logger.info("🌐 Testing CORS Configuration...")
+        
+        success = True
+        frontend_origin = "https://project-continue-16.preview.emergentagent.com"
+        
+        # Test preflight request (OPTIONS)
+        try:
+            headers = {
+                "Origin": frontend_origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "Content-Type, Authorization"
+            }
+            
+            async with self.session.options(f"{self.base_url}/auth/login", headers=headers) as response:
+                cors_headers = {
+                    "access-control-allow-origin": response.headers.get("Access-Control-Allow-Origin"),
+                    "access-control-allow-methods": response.headers.get("Access-Control-Allow-Methods"),
+                    "access-control-allow-headers": response.headers.get("Access-Control-Allow-Headers"),
+                    "access-control-allow-credentials": response.headers.get("Access-Control-Allow-Credentials")
+                }
+                
+                logger.info(f"CORS Preflight Response Status: {response.status}")
+                logger.info(f"CORS Headers: {cors_headers}")
+                
+                if response.status == 200:
+                    logger.info("✅ CORS preflight request successful")
+                    
+                    # Check if frontend origin is allowed
+                    allowed_origin = cors_headers["access-control-allow-origin"]
+                    if allowed_origin == frontend_origin or allowed_origin == "*":
+                        logger.info(f"✅ Frontend origin {frontend_origin} is allowed")
+                    else:
+                        logger.error(f"❌ Frontend origin not allowed. Expected: {frontend_origin}, Got: {allowed_origin}")
+                        success = False
+                        
+                    # Check if POST method is allowed
+                    allowed_methods = cors_headers.get("access-control-allow-methods", "")
+                    if "POST" in allowed_methods:
+                        logger.info("✅ POST method is allowed")
+                    else:
+                        logger.error(f"❌ POST method not allowed. Allowed methods: {allowed_methods}")
+                        success = False
+                        
+                    # Check if required headers are allowed
+                    allowed_headers = cors_headers.get("access-control-allow-headers", "")
+                    required_headers = ["Content-Type", "Authorization"]
+                    for header in required_headers:
+                        if header.lower() in allowed_headers.lower():
+                            logger.info(f"✅ {header} header is allowed")
+                        else:
+                            logger.error(f"❌ {header} header not allowed. Allowed headers: {allowed_headers}")
+                            success = False
+                else:
+                    logger.error(f"❌ CORS preflight failed with status: {response.status}")
+                    success = False
+                    
+        except Exception as e:
+            logger.error(f"❌ CORS preflight test failed: {str(e)}")
+            success = False
+        
+        # Test actual request with Origin header
+        try:
+            headers = {
+                "Origin": frontend_origin,
+                "Content-Type": "application/json"
+            }
+            
+            test_data = {
+                "email": "test@example.com",
+                "password": "testpass"
+            }
+            
+            async with self.session.post(f"{self.base_url}/auth/login", 
+                                       json=test_data, headers=headers) as response:
+                cors_origin = response.headers.get("Access-Control-Allow-Origin")
+                
+                logger.info(f"Actual request CORS Origin header: {cors_origin}")
+                
+                if cors_origin == frontend_origin or cors_origin == "*":
+                    logger.info("✅ CORS Origin header correctly set in actual response")
+                else:
+                    logger.error(f"❌ CORS Origin header missing or incorrect in actual response")
+                    success = False
+                    
+        except Exception as e:
+            logger.error(f"❌ Actual CORS request test failed: {str(e)}")
+            success = False
+        
+        return success
+
+    async def test_specific_authentication_users(self) -> bool:
+        """Test authentication with specific test users from review request"""
+        logger.info("🔐 Testing Authentication with Specific Test Users...")
+        
+        success = True
+        
+        # Test users from review request
+        test_users = [
+            {
+                "email": "admin@test.com",
+                "password": "testpass123",
+                "expected_role": "admin"
+            },
+            {
+                "email": "dealer@test.com", 
+                "password": "testpass123",
+                "expected_role": "dealer"
+            },
+            {
+                "email": "buyer@test.com",
+                "password": "testpass123", 
+                "expected_role": "buyer"
+            }
+        ]
+        
+        for user_data in test_users:
+            logger.info(f"🔍 Testing login for {user_data['email']} (expected role: {user_data['expected_role']})...")
+            
+            # Test login
+            login_data = {
+                "email": user_data["email"],
+                "password": user_data["password"]
+            }
+            
+            result = await self.make_request("POST", "/auth/login", login_data)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ Login successful for {user_data['email']}")
+                
+                # Store token for further testing
+                access_token = result["data"]["access_token"]
+                self.auth_tokens[f"test_{user_data['expected_role']}"] = access_token
+                
+                # Verify user info with /auth/me endpoint
+                headers = {"Authorization": f"Bearer {access_token}"}
+                me_result = await self.make_request("GET", "/auth/me", headers=headers)
+                
+                if me_result["status"] == 200:
+                    user_info = me_result["data"]
+                    actual_role = user_info.get("role")
+                    
+                    if actual_role == user_data["expected_role"]:
+                        logger.info(f"✅ Role verification successful: {actual_role}")
+                        logger.info(f"   User: {user_info.get('full_name', 'N/A')}")
+                        logger.info(f"   Email: {user_info.get('email', 'N/A')}")
+                    else:
+                        logger.error(f"❌ Role mismatch. Expected: {user_data['expected_role']}, Got: {actual_role}")
+                        success = False
+                else:
+                    logger.error(f"❌ Failed to get user info for {user_data['email']}: {me_result}")
+                    success = False
+                    
+            elif result["status"] == 400 and "requires_2fa" in result.get("data", {}):
+                logger.warning(f"⚠️  User {user_data['email']} has 2FA enabled - cannot test without 2FA token")
+                logger.info("   This is expected behavior for users with 2FA enabled")
+                
+            else:
+                logger.error(f"❌ Login failed for {user_data['email']}: {result}")
+                success = False
+        
+        return success
     
     async def create_specific_admin_test_users(self) -> bool:
         """Create specific test users for admin testing as mentioned in review request"""
