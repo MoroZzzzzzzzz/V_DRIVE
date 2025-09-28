@@ -1275,12 +1275,18 @@ class VelesDriveAPITester:
         
         # Find a test user to manage
         test_user_id = None
-        if "buyer" in self.test_users:
+        if "specific_buyer" in self.test_users:
             users_result = await self.make_request("GET", "/admin/users", headers=headers)
             if users_result["status"] == 200:
-                buyer_email = self.test_users["buyer"]["email"]
-                buyer_user = next((u for u in users_result["data"]["users"] 
-                                 if u["email"] == buyer_email), None)
+                buyer_email = self.test_users["specific_buyer"]["email"]
+                users_data = users_result["data"]
+                # Handle both response structures
+                if isinstance(users_data, list):
+                    users_list = users_data
+                else:
+                    users_list = users_data.get("users", [])
+                
+                buyer_user = next((u for u in users_list if u["email"] == buyer_email), None)
                 if buyer_user:
                     test_user_id = buyer_user["id"]
         
