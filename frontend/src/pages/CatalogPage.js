@@ -633,6 +633,7 @@ const CatalogPage = () => {
                   <Button 
                     className="btn-outline-gold"
                     onClick={() => setFilters({
+                      vehicleType: filters.vehicleType, // Keep current vehicle type
                       brand: '',
                       model: '',
                       minPrice: '',
