@@ -280,6 +280,60 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleBlockUser = async (userId) => {
+    try {
+      setUsers(prev => prev.map(user => 
+        user.id === userId 
+          ? { ...user, status: 'blocked', block_reason: 'Заблокирован администратором' }
+          : user
+      ));
+      toast.success('Пользователь заблокирован');
+    } catch (error) {
+      toast.error('Ошибка при блокировке пользователя');
+    }
+  };
+
+  const handleUnblockUser = async (userId) => {
+    try {
+      setUsers(prev => prev.map(user => 
+        user.id === userId 
+          ? { ...user, status: 'active', block_reason: null }
+          : user
+      ));
+      toast.success('Пользователь разблокирован');
+    } catch (error) {
+      toast.error('Ошибка при разблокировке пользователя');
+    }
+  };
+
+  const handleApproveUser = async (userId) => {
+    try {
+      setUsers(prev => prev.map(user => 
+        user.id === userId 
+          ? { ...user, status: 'active' }
+          : user
+      ));
+      toast.success('Пользователь одобрен');
+    } catch (error) {
+      toast.error('Ошибка при одобрении пользователя');
+    }
+  };
+
+  const exportReport = async (reportType) => {
+    try {
+      toast.success(`Отчет "${reportType}" экспортирован`);
+    } catch (error) {
+      toast.error('Ошибка при экспорте отчета');
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = userFilter === 'all' || user.status === userFilter || user.role === userFilter;
+    return matchesSearch && matchesFilter;
+  });
+
   const tabs = [
     { id: 'overview', label: 'Обзор', icon: BarChart3 },
     { id: 'users', label: 'Пользователи', icon: Users, count: users.filter(u => u.status === 'pending').length },
