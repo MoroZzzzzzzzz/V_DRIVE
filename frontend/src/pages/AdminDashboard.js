@@ -226,13 +226,41 @@ const AdminDashboard = () => {
   const loadAdminData = async () => {
     try {
       setLoading(true);
-      // In a real implementation, these would be API calls
+      
+      // Load real admin statistics
+      const statsResponse = await axios.get(`${backendUrl}/api/admin/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStats(statsResponse.data);
+      
+      // Load users data
+      const usersResponse = await axios.get(`${backendUrl}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(usersResponse.data);
+      
+      // Load reports data
+      const reportsResponse = await axios.get(`${backendUrl}/api/admin/reports`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReports(reportsResponse.data);
+      
+      // Set mock pending items for now (can be extended later)
+      setPendingItems(mockPendingItems);
+      
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+      toast.error('Ошибка загрузки данных администратора');
+      
+      // Fallback to mock data on error
       setStats(mockStats);
       setUsers(mockUsers);
       setPendingItems(mockPendingItems);
       setReports(mockReports);
-    } catch (error) {
-      toast.error('Ошибка загрузки данных администратора');
+    } finally {
+      setLoading(false);
+    }
+  };
     } finally {
       setLoading(false);
     }
