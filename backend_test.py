@@ -1611,15 +1611,30 @@ class VelesDriveAPITester:
         import pyotp
         secret = self.test_data["2fa_secret"]
         totp = pyotp.TOTP(secret)
-        valid_token = totp.now()
         
-        logger.info(f"Generated TOTP token: {valid_token}")
-        
-        # Test verification with valid token
-        form_data = aiohttp.FormData()
-        form_data.add_field("token", valid_token)
-        
-        result = await self.make_request("POST", "/security/2fa/verify-setup", files=form_data, headers=headers)
+        # Try multiple times with fresh tokens to handle timing issues
+        verification_success = False
+        for attempt in range(3):
+            valid_token = totp.now()
+            logger.info(f"Generated TOTP token (attempt {attempt + 1}): {valid_token}")
+            
+            # Test verification with valid token
+            form_data = aiohttp.FormData()
+            form_data.add_field("token", valid_token)
+            
+            result = await self.make_request("POST", "/security/2fa/verify-setup", files=form_data, headers=headers)
+            
+            if result["status"] == 200:
+                verification_success = True
+                break
+            elif result["status"] == 400 and "Invalid verification code" in result["data"].get("detail", ""):
+                logger.warning(f"Token {valid_token} expired, trying again...")
+                # Wait a bit for next token window
+                await asyncio.sleep(2)
+                continue
+            else:
+                # Other error, break
+                break
         
         if result["status"] == 200:
             verify_data = result["data"]
