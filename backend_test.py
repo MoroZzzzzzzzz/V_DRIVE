@@ -1272,7 +1272,14 @@ class VelesDriveAPITester:
             
             if result["status"] == 200:
                 search_results = result["data"]
-                logger.info(f"✅ Search for '{search_term}': {len(search_results['users'])} users")
+                # Handle both response structures
+                if isinstance(search_results, list):
+                    logger.info(f"✅ Search for '{search_term}': {len(search_results)} users")
+                elif isinstance(search_results, dict) and "users" in search_results:
+                    logger.info(f"✅ Search for '{search_term}': {len(search_results['users'])} users")
+                else:
+                    logger.error(f"❌ Unexpected search results structure: {type(search_results)}")
+                    success = False
             else:
                 logger.error(f"❌ User search failed: {result}")
                 success = False
