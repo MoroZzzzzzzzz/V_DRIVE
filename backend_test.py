@@ -1252,7 +1252,14 @@ class VelesDriveAPITester:
             
             if result["status"] == 200:
                 filtered_users = result["data"]
-                logger.info(f"✅ Role filter '{role}': {len(filtered_users['users'])} users")
+                # Handle both response structures
+                if isinstance(filtered_users, list):
+                    logger.info(f"✅ Role filter '{role}': {len(filtered_users)} users")
+                elif isinstance(filtered_users, dict) and "users" in filtered_users:
+                    logger.info(f"✅ Role filter '{role}': {len(filtered_users['users'])} users")
+                else:
+                    logger.error(f"❌ Unexpected filtered users structure: {type(filtered_users)}")
+                    success = False
             else:
                 logger.error(f"❌ Role filtering failed for '{role}': {result}")
                 success = False
