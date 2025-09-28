@@ -691,6 +691,21 @@ VELES DRIVE - современная платформа для автомоби�
       - working: true
         agent: "testing"
         comment: "✅ TELEGRAM BACKEND API ПОЛНОСТЬЮ ПРОТЕСТИРОВАН: Routing проблема исправлена, все 6 API endpoints работают. Authentication/authorization корректны, MongoDB интеграция функционирует, коды подключения создаются правильно. Backend готов к production."
+      - working: true
+        agent: "testing"
+        comment: "✅ ПОВТОРНОЕ ТЕСТИРОВАНИЕ TELEGRAM BOT ENDPOINTS ЗАВЕРШЕНО: Протестированы все существующие Telegram bot endpoints согласно review request. GET /api/telegram/status работает для всех ролей (admin, dealer, buyer), POST /api/telegram/generate-code создает 8-символьные коды подключения, POST /api/telegram/connect обрабатывает подключения корректно. Admin-only endpoints (send-notification, users) защищены HTTP 403 для non-admins. Все роли пользователей могут использовать основные Telegram endpoints. Backend готов к интеграции с реальным Telegram bot."
+
+  - task: "Новые Admin endpoints"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ НОВЫЕ ADMIN ENDPOINTS ПОЛНОСТЬЮ ПРОТЕСТИРОВАНЫ: Все 9 новых admin endpoints работают корректно согласно review request. GET /api/admin/stats возвращает статистику платформы (82 пользователя, 25 дилеров, 34 автомобиля), GET /api/admin/users предоставляет список пользователей с фильтрацией, POST /api/admin/users/{id}/block|unblock|approve управляют пользователями, GET /api/admin/reports генерирует системные отчеты, POST /api/admin/reports/{type}/export создает download URLs, POST /api/admin/moderation/approve|reject обрабатывают модерацию контента. Только админы имеют доступ к admin/* endpoints, обычные пользователи получают HTTP 403. JSON структуры ответов корректны, аутентификация и авторизация работают правильно."
 
   - task: "Admin Dashboard backend API"
     implemented: true
