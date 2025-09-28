@@ -3784,6 +3784,46 @@ async def main_admin_dashboard_tests():
         logger.error(f"❌ Admin dashboard testing failed with error: {str(e)}")
         sys.exit(1)
 
+async def main_erp_tests():
+    """Main function for comprehensive ERP system testing"""
+    logger.info("🏢 ЗАПУСК КОМПЛЕКСНОГО ТЕСТИРОВАНИЯ ERP СИСТЕМЫ VELES DRIVE")
+    logger.info("="*80)
+    
+    try:
+        async with VelesDriveAPITester() as tester:
+            # Test basic connectivity first
+            if not await tester.test_basic_connectivity():
+                logger.error("❌ Basic connectivity failed. Cannot proceed with ERP testing.")
+                sys.exit(1)
+            
+            # Run comprehensive ERP testing
+            logger.info("\n🧪 Запуск комплексного тестирования ERP системы...")
+            erp_success = await tester.test_erp_system_comprehensive()
+            
+            # Print final results
+            logger.info("\n" + "="*80)
+            logger.info("📊 РЕЗУЛЬТАТЫ ТЕСТИРОВАНИЯ ERP СИСТЕМЫ")
+            logger.info("="*80)
+            
+            if erp_success:
+                logger.info("🎉 ВСЕ ТЕСТЫ ERP СИСТЕМЫ ПРОШЛИ УСПЕШНО!")
+                logger.info("✅ ERP система VELES DRIVE полностью функциональна")
+                logger.info("✅ Аутентификация дилеров работает корректно")
+                logger.info("✅ Контроль доступа по ролям настроен правильно")
+                logger.info("✅ Все ERP endpoints доступны и работают")
+                logger.info("✅ JSON структуры корректны")
+            else:
+                logger.error("❌ НЕКОТОРЫЕ ТЕСТЫ ERP СИСТЕМЫ НЕ ПРОШЛИ")
+                logger.error("⚠️  Пожалуйста, проверьте ошибки выше и исправьте проблемы")
+                sys.exit(1)
+                
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  ERP testing interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ ERP testing failed with error: {str(e)}")
+        sys.exit(1)
+
 if __name__ == "__main__":
     # Check if we should run specific tests
     if len(sys.argv) > 1:
@@ -3793,11 +3833,14 @@ if __name__ == "__main__":
             asyncio.run(main_2fa_tests())
         elif sys.argv[1] == "admin":
             asyncio.run(main_admin_dashboard_tests())
+        elif sys.argv[1] == "erp":
+            asyncio.run(main_erp_tests())
         else:
-            logger.info("Usage: python backend_test.py [ai|2fa|admin]")
+            logger.info("Usage: python backend_test.py [ai|2fa|admin|erp]")
             logger.info("  ai    - Run AI function tests only")
             logger.info("  2fa   - Run 2FA system tests only")
             logger.info("  admin - Run Admin Dashboard tests only")
+            logger.info("  erp   - Run comprehensive ERP system tests only")
             logger.info("  (no args) - Run authentication tests")
             sys.exit(1)
     else:
