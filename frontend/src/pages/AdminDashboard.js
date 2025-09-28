@@ -39,8 +39,13 @@ const AdminDashboard = () => {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({});
+  const [users, setUsers] = useState([]);
   const [pendingItems, setPendingItems] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [userFilter, setUserFilter] = useState('all');
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // Mock data for admin dashboard
   const mockStats = {
