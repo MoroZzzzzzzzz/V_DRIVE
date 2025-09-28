@@ -287,7 +287,21 @@ const CatalogPage = () => {
 
           {/* Filters */}
           <Card className="glass-card p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Тип транспорта</label>
+                <select
+                  className="form-input w-full"
+                  value={filters.vehicleType}
+                  onChange={(e) => handleFilterChange('vehicleType', e.target.value)}
+                >
+                  <option value="car">🚗 Автомобили</option>
+                  <option value="motorcycle">🏍️ Мотоциклы</option>
+                  <option value="boat">🛥️ Лодки</option>
+                  <option value="plane">✈️ Самолеты</option>
+                </select>
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Марка</label>
                 <input
