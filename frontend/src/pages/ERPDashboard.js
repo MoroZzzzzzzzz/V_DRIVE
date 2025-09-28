@@ -115,6 +115,9 @@ const ERPDashboard = () => {
     { id: 'projects', label: 'Проекты', icon: 'fas fa-project-diagram' },
     { id: 'clients', label: 'Клиенты', icon: 'fas fa-users-cog' },
     { id: 'crm', label: 'CRM', icon: 'fas fa-users' },
+    { id: 'service', label: 'Сервис', icon: 'fas fa-wrench' },
+    { id: 'offers', label: 'Предложения', icon: 'fas fa-gift' },
+    { id: 'history', label: 'История', icon: 'fas fa-history' },
     { id: 'finance', label: 'Финансы', icon: 'fas fa-coins' },
     { id: 'reports', label: 'Отчеты', icon: 'fas fa-file-chart' }
   ];
