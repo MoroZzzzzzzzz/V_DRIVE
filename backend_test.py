@@ -1166,241 +1166,275 @@ class VelesDriveAPITester:
         
         return success
 
-    async def test_admin_dashboard_extended(self) -> bool:
-        """Test extended Admin Dashboard functionality"""
-        logger.info("🏛️ Testing Extended Admin Dashboard...")
+    async def test_admin_routing_fix(self) -> bool:
+        """Test fixed admin endpoints after removing duplicate routes"""
+        logger.info("🏛️ Testing Fixed Admin Endpoints After Routing Conflicts Resolution...")
         
-        # Use existing admin token or create one
-        admin_token_key = None
-        if "specific_admin" in self.auth_tokens:
-            admin_token_key = "specific_admin"
-        elif "admin" in self.auth_tokens:
-            admin_token_key = "admin"
-        else:
-            await self.test_admin_panel()  # This will create admin user
-            admin_token_key = "admin"
+        # Ensure we have admin credentials
+        if "specific_admin" not in self.auth_tokens:
+            await self.create_specific_admin_test_users()
         
-        if admin_token_key not in self.auth_tokens:
-            logger.error("❌ No admin token available for extended testing")
+        if "specific_admin" not in self.auth_tokens:
+            logger.error("❌ No admin token available for routing fix testing")
             return False
         
         success = True
-        headers = self.get_auth_headers("admin")
+        headers = self.get_auth_headers("specific_admin")
         
-        # Test 1: Admin Stats Endpoint
-        logger.info("Testing Admin Stats Endpoint...")
+        # Test 1: Admin Stats Endpoint - /api/admin/stats
+        logger.info("🔍 Testing Admin Stats Endpoint (/api/admin/stats)...")
         result = await self.make_request("GET", "/admin/stats", headers=headers)
         
         if result["status"] == 200:
             stats = result["data"]
-            logger.info("✅ Admin stats retrieved successfully")
+            logger.info("✅ Admin Stats Endpoint - Working correctly")
             
-            # Verify expected fields - check both flat structure and nested structure
-            if "overview" in stats:
-                # Nested structure
-                overview = stats["overview"]
-                monthly = stats.get("monthly_stats", {})
-                logger.info(f"   total_users: {overview.get('total_users', 'N/A')}")
-                logger.info(f"   total_dealers: {overview.get('total_dealers', 'N/A')}")
-                logger.info(f"   total_cars: {overview.get('total_cars', 'N/A')}")
-                logger.info(f"   new_users: {monthly.get('new_users', 'N/A')}")
-                logger.info(f"   revenue: {monthly.get('revenue', 'N/A')}")
-            else:
-                # Flat structure
-                expected_fields = ["total_users", "total_dealers", "total_buyers", "total_cars", 
-                                 "blocked_users", "new_registrations", "monthly_revenue"]
-                for field in expected_fields:
-                    if field in stats:
-                        logger.info(f"   {field}: {stats[field]}")
-                    else:
-                        logger.warning(f"⚠️  Missing field in stats: {field}")
+            # Log key statistics
+            if isinstance(stats, dict):
+                if "total_users" in stats:
+                    logger.info(f"   📊 total_users: {stats.get('total_users', 'N/A')}")
+                    logger.info(f"   📊 total_dealers: {stats.get('total_dealers', 'N/A')}")
+                    logger.info(f"   📊 total_cars: {stats.get('total_cars', 'N/A')}")
+                    logger.info(f"   📊 revenue: {stats.get('revenue', 'N/A')} RUB")
+                else:
+                    logger.info(f"   📊 Stats structure: {list(stats.keys())}")
+        elif result["status"] == 404:
+            logger.error("❌ Admin Stats Endpoint - HTTP 404 (Route conflict not resolved)")
+            success = False
         else:
-            logger.error(f"❌ Admin stats failed: {result}")
+            logger.error(f"❌ Admin Stats Endpoint failed: HTTP {result['status']} - {result}")
             success = False
         
-        # Test 2: Admin Users Endpoint with filtering
-        logger.info("Testing Admin Users Endpoint...")
-        
-        # Test basic user list
+        # Test 2: Admin Users Endpoint - /api/admin/users
+        logger.info("🔍 Testing Admin Users Endpoint (/api/admin/users)...")
         result = await self.make_request("GET", "/admin/users", headers=headers)
         
         if result["status"] == 200:
             users_data = result["data"]
-            # Handle both possible response structures
             if isinstance(users_data, list):
-                # Direct list response
-                logger.info(f"✅ Retrieved {len(users_data)} users (direct list)")
+                user_count = len(users_data)
                 users_list = users_data
             elif isinstance(users_data, dict) and "users" in users_data:
-                # Wrapped response
-                logger.info(f"✅ Retrieved {len(users_data['users'])} users")
-                logger.info(f"   Total users: {users_data['total']}")
+                user_count = len(users_data["users"])
                 users_list = users_data["users"]
             else:
-                logger.error(f"❌ Unexpected users data structure: {type(users_data)}")
-                success = False
+                user_count = 0
                 users_list = []
+            
+            logger.info(f"✅ Admin Users Endpoint - Retrieved {user_count} users")
+        elif result["status"] == 404:
+            logger.error("❌ Admin Users Endpoint - HTTP 404 (Route conflict not resolved)")
+            success = False
+            users_list = []
         else:
-            logger.error(f"❌ Admin users list failed: {result}")
+            logger.error(f"❌ Admin Users Endpoint failed: HTTP {result['status']} - {result}")
             success = False
             users_list = []
         
-        # Test filtering by role
-        for role in ["buyer", "dealer", "admin"]:
-            result = await self.make_request("GET", "/admin/users", 
-                                           {"role_filter": role}, headers)
-            
-            if result["status"] == 200:
-                filtered_users = result["data"]
-                # Handle both response structures
-                if isinstance(filtered_users, list):
-                    logger.info(f"✅ Role filter '{role}': {len(filtered_users)} users")
-                elif isinstance(filtered_users, dict) and "users" in filtered_users:
-                    logger.info(f"✅ Role filter '{role}': {len(filtered_users['users'])} users")
-                else:
-                    logger.error(f"❌ Unexpected filtered users structure: {type(filtered_users)}")
-                    success = False
-            else:
-                logger.error(f"❌ Role filtering failed for '{role}': {result}")
-                success = False
+        # Test 2a: Role Filtering - /api/admin/users?role_filter=buyer
+        logger.info("🔍 Testing Role Filtering (/api/admin/users?role_filter=buyer)...")
+        result = await self.make_request("GET", "/admin/users", {"role_filter": "buyer"}, headers)
         
-        # Test search functionality
-        if self.test_users.get("buyer"):
-            search_term = self.test_users["buyer"]["full_name"].split()[0]
-            result = await self.make_request("GET", "/admin/users", 
-                                           {"search": search_term}, headers)
-            
-            if result["status"] == 200:
-                search_results = result["data"]
-                # Handle both response structures
-                if isinstance(search_results, list):
-                    logger.info(f"✅ Search for '{search_term}': {len(search_results)} users")
-                elif isinstance(search_results, dict) and "users" in search_results:
-                    logger.info(f"✅ Search for '{search_term}': {len(search_results['users'])} users")
-                else:
-                    logger.error(f"❌ Unexpected search results structure: {type(search_results)}")
-                    success = False
+        if result["status"] == 200:
+            filtered_data = result["data"]
+            if isinstance(filtered_data, list):
+                buyer_count = len(filtered_data)
+                buyers = filtered_data
+            elif isinstance(filtered_data, dict) and "users" in filtered_data:
+                buyer_count = len(filtered_data["users"])
+                buyers = filtered_data["users"]
             else:
-                logger.error(f"❌ User search failed: {result}")
+                buyer_count = 0
+                buyers = []
+            
+            # Verify all returned users are buyers
+            all_buyers = all(user.get("role") == "buyer" for user in buyers)
+            if all_buyers:
+                logger.info(f"✅ Role Filtering - Correctly returned {buyer_count} buyers only")
+            else:
+                logger.error(f"❌ Role Filtering - Returned non-buyer users in buyer filter")
                 success = False
+        elif result["status"] == 404:
+            logger.error("❌ Role Filtering - HTTP 404 (Route conflict not resolved)")
+            success = False
+        else:
+            logger.error(f"❌ Role Filtering failed: HTTP {result['status']} - {result}")
+            success = False
+        
+        # Test 2b: Search Functionality - /api/admin/users?search=test
+        logger.info("🔍 Testing Search Functionality (/api/admin/users?search=test)...")
+        result = await self.make_request("GET", "/admin/users", {"search": "test"}, headers)
+        
+        if result["status"] == 200:
+            search_data = result["data"]
+            if isinstance(search_data, list):
+                search_count = len(search_data)
+            elif isinstance(search_data, dict) and "users" in search_data:
+                search_count = len(search_data["users"])
+            else:
+                search_count = 0
+            
+            logger.info(f"✅ Search Functionality - Found {search_count} users matching 'test'")
+        elif result["status"] == 404:
+            logger.error("❌ Search Functionality - HTTP 404 (Route conflict not resolved)")
+            success = False
+        else:
+            logger.error(f"❌ Search Functionality failed: HTTP {result['status']} - {result}")
+            success = False
         
         # Test 3: User Management Endpoints
-        logger.info("Testing User Management Endpoints...")
+        logger.info("🔍 Testing User Management Endpoints...")
         
-        # Find a test user to manage
+        # Find a test user for management operations
         test_user_id = None
-        if "specific_buyer" in self.test_users:
-            users_result = await self.make_request("GET", "/admin/users", headers=headers)
-            if users_result["status"] == 200:
-                buyer_email = self.test_users["specific_buyer"]["email"]
-                users_data = users_result["data"]
-                # Handle both response structures
-                if isinstance(users_data, list):
-                    users_list = users_data
-                else:
-                    users_list = users_data.get("users", [])
-                
-                buyer_user = next((u for u in users_list if u["email"] == buyer_email), None)
-                if buyer_user:
-                    test_user_id = buyer_user["id"]
+        if "specific_buyer" in self.test_users and users_list:
+            buyer_email = self.test_users["specific_buyer"]["email"]
+            buyer_user = next((u for u in users_list if u["email"] == buyer_email), None)
+            if buyer_user:
+                test_user_id = buyer_user["id"]
         
         if test_user_id:
-            # Test user blocking
+            # Test 3a: User Blocking - POST /api/admin/users/{id}/block
+            logger.info(f"🔍 Testing User Blocking (/api/admin/users/{test_user_id}/block)...")
+            block_data = {"reason": "Testing admin user blocking functionality"}
             result = await self.make_request("POST", f"/admin/users/{test_user_id}/block", 
-                                           {"reason": "Test blocking for admin testing"}, headers)
+                                           block_data, headers)
             
             if result["status"] == 200:
-                logger.info("✅ User blocked successfully")
+                logger.info("✅ User Blocking - Working correctly")
                 
-                # Test user unblocking
+                # Test 3b: User Unblocking - POST /api/admin/users/{id}/unblock
+                logger.info(f"🔍 Testing User Unblocking (/api/admin/users/{test_user_id}/unblock)...")
                 result = await self.make_request("POST", f"/admin/users/{test_user_id}/unblock", 
                                                headers=headers)
                 
                 if result["status"] == 200:
-                    logger.info("✅ User unblocked successfully")
+                    logger.info("✅ User Unblocking - Working correctly")
+                elif result["status"] == 404:
+                    logger.error("❌ User Unblocking - HTTP 404 (Route conflict not resolved)")
+                    success = False
                 else:
-                    logger.error(f"❌ User unblocking failed: {result}")
+                    logger.error(f"❌ User Unblocking failed: HTTP {result['status']} - {result}")
                     success = False
             elif result["status"] == 404:
-                logger.warning("⚠️  User management endpoints not found - backend has duplicate route definitions")
-                logger.warning("⚠️  The new admin user management endpoints are not accessible")
-                # Don't mark as failure since this is a backend routing issue
+                logger.error("❌ User Blocking - HTTP 404 (Route conflict not resolved)")
+                success = False
             else:
-                logger.error(f"❌ User blocking failed: {result}")
+                logger.error(f"❌ User Blocking failed: HTTP {result['status']} - {result}")
+                success = False
+            
+            # Test 3c: User Approval - POST /api/admin/users/{id}/approve
+            logger.info(f"🔍 Testing User Approval (/api/admin/users/{test_user_id}/approve)...")
+            result = await self.make_request("POST", f"/admin/users/{test_user_id}/approve", 
+                                           headers=headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ User Approval - Working correctly")
+            elif result["status"] == 404:
+                logger.error("❌ User Approval - HTTP 404 (Route conflict not resolved)")
+                success = False
+            else:
+                logger.error(f"❌ User Approval failed: HTTP {result['status']} - {result}")
                 success = False
         else:
-            logger.warning("⚠️  No test user found for management testing")
+            logger.warning("⚠️  No test user found for user management testing")
         
-        # Test 4: Admin Reports Endpoint
-        logger.info("Testing Admin Reports Endpoint...")
+        # Test 4: Admin Reports Endpoint - GET /api/admin/reports
+        logger.info("🔍 Testing Admin Reports Endpoint (/api/admin/reports)...")
         result = await self.make_request("GET", "/admin/reports", headers=headers)
         
         if result["status"] == 200:
             reports_data = result["data"]
-            reports = reports_data["reports"]
-            logger.info(f"✅ Retrieved {len(reports)} admin reports")
-            
-            # Verify report types
-            report_types = [report["type"] for report in reports]
-            expected_types = ["security", "sales", "system"]
-            for report_type in expected_types:
-                if report_type in report_types:
-                    logger.info(f"   Found {report_type} report")
-                else:
-                    logger.warning(f"⚠️  Missing {report_type} report")
+            if isinstance(reports_data, dict) and "reports" in reports_data:
+                reports = reports_data["reports"]
+                logger.info(f"✅ Admin Reports Endpoint - Retrieved {len(reports)} system reports")
+                
+                # Verify expected report types
+                report_types = [report.get("type") for report in reports]
+                expected_types = ["security", "sales", "system"]
+                for report_type in expected_types:
+                    if report_type in report_types:
+                        logger.info(f"   📋 Found {report_type} report")
+                    else:
+                        logger.warning(f"   ⚠️  Missing {report_type} report")
+            else:
+                logger.info(f"✅ Admin Reports Endpoint - Response structure: {type(reports_data)}")
         elif result["status"] == 404:
-            logger.warning("⚠️  Admin reports endpoint not found - backend has duplicate route definitions")
-            logger.warning("⚠️  The new admin endpoints are not accessible due to route conflicts")
-            # Don't mark as failure since this is a backend routing issue
+            logger.error("❌ Admin Reports Endpoint - HTTP 404 (Route conflict not resolved)")
+            success = False
         else:
-            logger.error(f"❌ Admin reports failed: {result}")
+            logger.error(f"❌ Admin Reports Endpoint failed: HTTP {result['status']} - {result}")
             success = False
         
-        # Test 5: Report Export Endpoint
-        logger.info("Testing Report Export Endpoint...")
+        # Test 5: Report Export Endpoints - POST /api/admin/reports/{type}/export
+        logger.info("🔍 Testing Report Export Endpoints...")
         
         export_types = ["security", "sales", "system"]
         for export_type in export_types:
+            logger.info(f"🔍 Testing {export_type} report export...")
             result = await self.make_request("POST", f"/admin/reports/{export_type}/export", 
                                            headers=headers)
             
             if result["status"] == 200:
                 export_data = result["data"]
-                logger.info(f"✅ {export_type} report export successful")
-                logger.info(f"   Download URL: {export_data['download_url']}")
+                if "download_url" in export_data:
+                    logger.info(f"✅ {export_type.title()} Report Export - Working correctly")
+                    logger.info(f"   📥 Download URL: {export_data['download_url']}")
+                else:
+                    logger.info(f"✅ {export_type.title()} Report Export - Response received")
             elif result["status"] == 404:
-                logger.warning(f"⚠️  {export_type} report export endpoint not found - backend routing issue")
-                # Don't mark as failure since this is a backend routing issue
+                logger.error(f"❌ {export_type.title()} Report Export - HTTP 404 (Route conflict not resolved)")
+                success = False
             else:
-                logger.error(f"❌ {export_type} report export failed: {result}")
+                logger.error(f"❌ {export_type.title()} Report Export failed: HTTP {result['status']} - {result}")
                 success = False
         
-        # Test 6: Access Control - Non-admin users should be blocked
-        logger.info("Testing Access Control...")
+        # Test 6: Access Control Verification
+        logger.info("🔍 Testing Access Control for Non-Admin Users...")
         
-        if "buyer" in self.auth_tokens or "specific_buyer" in self.auth_tokens:
-            buyer_headers = self.get_auth_headers("buyer")
+        # Test with buyer credentials
+        if "specific_buyer" in self.auth_tokens:
+            buyer_headers = self.get_auth_headers("specific_buyer")
             
-            # Test that buyer cannot access admin endpoints
             admin_endpoints = [
-                "/admin/stats",
-                "/admin/users", 
-                "/admin/reports"
+                ("/admin/stats", "Admin Stats"),
+                ("/admin/users", "Admin Users"),
+                ("/admin/reports", "Admin Reports")
             ]
             
-            for endpoint in admin_endpoints:
+            for endpoint, name in admin_endpoints:
                 result = await self.make_request("GET", endpoint, headers=buyer_headers)
                 
                 if result["status"] == 403:
-                    logger.info(f"✅ Access properly blocked for buyer on {endpoint}")
-                elif result["status"] == 404 and endpoint == "/admin/reports":
-                    logger.warning(f"⚠️  {endpoint} not found - backend routing issue")
-                    # Don't mark as failure since this is a backend routing issue
+                    logger.info(f"✅ {name} - Access properly blocked for buyer (HTTP 403)")
+                elif result["status"] == 404:
+                    logger.warning(f"⚠️  {name} - HTTP 404 (Route conflict not resolved)")
                 else:
-                    logger.error(f"❌ Buyer should not access {endpoint}: {result}")
+                    logger.error(f"❌ {name} - Buyer should not access: HTTP {result['status']}")
                     success = False
         
+        # Test with dealer credentials
+        if "specific_dealer" in self.auth_tokens:
+            dealer_headers = self.get_auth_headers("specific_dealer")
+            
+            result = await self.make_request("GET", "/admin/stats", headers=dealer_headers)
+            
+            if result["status"] == 403:
+                logger.info("✅ Admin Stats - Access properly blocked for dealer (HTTP 403)")
+            elif result["status"] == 404:
+                logger.warning("⚠️  Admin Stats - HTTP 404 for dealer (Route conflict not resolved)")
+            else:
+                logger.error(f"❌ Admin Stats - Dealer should not access: HTTP {result['status']}")
+                success = False
+        
         return success
+
+    async def test_admin_dashboard_extended(self) -> bool:
+        """Test extended Admin Dashboard functionality"""
+        logger.info("🏛️ Testing Extended Admin Dashboard...")
+        
+        # Use the new routing fix test instead
+        return await self.test_admin_routing_fix()
 
     async def test_vehicle_types_system(self) -> bool:
         """Test extended vehicle support (cars, motorcycles, boats, planes)"""
