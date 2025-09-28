@@ -47,7 +47,7 @@ const AdminDashboard = () => {
   const [userFilter, setUserFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Mock data for admin dashboard
+  // Enhanced mock data for admin dashboard
   const mockStats = {
     total_users: 1247,
     total_dealers: 89,
@@ -56,8 +56,123 @@ const AdminDashboard = () => {
     total_transactions: 156,
     monthly_revenue: 2856000,
     new_registrations: 45,
-    active_sessions: 312
+    active_sessions: 312,
+    blocked_users: 12,
+    reported_content: 8,
+    system_alerts: 3,
+    server_uptime: 99.8,
+    avg_response_time: 142,
+    total_views: 45621,
+    conversion_rate: 3.2,
+    premium_users: 156
   };
+
+  const mockUsers = [
+    {
+      id: '1',
+      email: 'john.doe@example.com',
+      full_name: 'Иван Петров',
+      role: 'buyer',
+      status: 'active',
+      created_at: '2024-01-15T10:30:00Z',
+      last_login: '2024-01-16T14:20:00Z',
+      total_purchases: 2,
+      two_fa_enabled: true,
+      phone: '+7-900-123-4567'
+    },
+    {
+      id: '2',
+      email: 'premium.auto@dealer.ru',
+      full_name: 'Премиум Авто Москва',
+      role: 'dealer',
+      status: 'active',
+      created_at: '2024-01-10T09:15:00Z',
+      last_login: '2024-01-16T16:45:00Z',
+      total_sales: 45,
+      two_fa_enabled: false,
+      phone: '+7-495-123-4567',
+      company_name: 'Премиум Авто'
+    },
+    {
+      id: '3',
+      email: 'admin@velesdrive.ru',
+      full_name: 'Системный Администратор',
+      role: 'admin',
+      status: 'active',
+      created_at: '2024-01-01T00:00:00Z',
+      last_login: '2024-01-16T17:30:00Z',
+      two_fa_enabled: true,
+      phone: '+7-800-555-0000'
+    },
+    {
+      id: '4',
+      email: 'blocked.user@example.com',
+      full_name: 'Заблокированный Пользователь',
+      role: 'buyer',
+      status: 'blocked',
+      created_at: '2024-01-12T12:00:00Z',
+      last_login: '2024-01-14T10:00:00Z',
+      total_purchases: 0,
+      two_fa_enabled: false,
+      phone: '+7-900-999-8888',
+      block_reason: 'Спам и мошенничество'
+    },
+    {
+      id: '5',
+      email: 'new.dealer@cars.ru',
+      full_name: 'Новый Автосалон',
+      role: 'dealer',
+      status: 'pending',
+      created_at: '2024-01-16T08:00:00Z',
+      last_login: '2024-01-16T08:15:00Z',
+      total_sales: 0,
+      two_fa_enabled: false,
+      phone: '+7-812-987-6543',
+      company_name: 'Авто Центр СПб'
+    }
+  ];
+
+  const mockReports = [
+    {
+      id: '1',
+      type: 'security',
+      title: 'Отчет по безопасности',
+      description: 'Еженедельный отчет по безопасности системы',
+      created_at: '2024-01-16T10:00:00Z',
+      status: 'completed',
+      data: {
+        failed_logins: 45,
+        blocked_ips: 12,
+        security_alerts: 3
+      }
+    },
+    {
+      id: '2',
+      type: 'sales',
+      title: 'Отчет по продажам',
+      description: 'Месячный отчет по продажам и транзакциям',
+      created_at: '2024-01-16T09:30:00Z',
+      status: 'completed',
+      data: {
+        total_sales: 156,
+        revenue: 2856000,
+        top_dealers: ['Премиум Авто', 'Элит Моторс']
+      }
+    },
+    {
+      id: '3',
+      type: 'system',
+      title: 'Системный отчет',
+      description: 'Производительность и мониторинг системы',
+      created_at: '2024-01-16T08:00:00Z',
+      status: 'generating',
+      data: {
+        uptime: 99.8,
+        response_time: 142,
+        active_sessions: 312
+      }
+    }
+  ];
 
   const mockPendingItems = [
     {
