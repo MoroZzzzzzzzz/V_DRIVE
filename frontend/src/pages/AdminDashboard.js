@@ -908,7 +908,7 @@ const AdminDashboard = () => {
                   <div className="flex gap-2">
                     <Button 
                       size="sm"
-                      onClick={() => handleApprove(item.id, item.type)}
+                      onClick={() => handleApprovePending(item.id, item.type)}
                       className="bg-green-600 text-white hover:bg-green-700"
                     >
                       <CheckCircle size={16} className="mr-1" />
