@@ -806,7 +806,7 @@ const AdminDashboard = () => {
                         {userData.status === 'blocked' && (
                           <Button 
                             size="sm" 
-                            onClick={() => handleUnblockUser(userData.id)}
+                            onClick={() => unblockUser(userData.id)}
                             className="bg-green-600 text-white hover:bg-green-700"
                           >
                             <UserX size={16} />
