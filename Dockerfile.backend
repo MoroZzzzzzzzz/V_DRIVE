@@ -1,0 +1,32 @@
+# Backend Dockerfile для VELES DRIVE
+FROM python:3.11-slim
+
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Создание рабочей директории
+WORKDIR /app
+
+# Копирование requirements и установка Python зависимостей
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копирование backend кода
+COPY backend/ .
+
+# Создание непривилегированного пользователя
+RUN useradd -m -u 1000 veles && chown -R veles:veles /app
+USER veles
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8001/api/ || exit 1
+
+# Экспорт порта
+EXPOSE 8001
+
+# Команда запуска
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
