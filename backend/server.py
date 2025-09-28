@@ -536,7 +536,7 @@ async def login(credentials: Dict[str, str], request: Request):
                 is_2fa_valid = True
                 used_backup_code = backup_code
         elif two_fa_token:
-            is_2fa_valid = two_factor_auth.verify_token(user.two_fa_secret, two_fa_token)
+            is_2fa_valid = two_factor_auth.verify_token(user.two_fa_secret, two_fa_token, window=2)
         
         if not is_2fa_valid:
             security_service.record_failed_attempt(client_ip, user.id)
