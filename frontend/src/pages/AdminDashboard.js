@@ -882,7 +882,7 @@ const AdminDashboard = () => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {pendingItems.map((item) => (
+          {(pendingItems || []).map((item) => (
             <Card key={item.id} className="bg-gray-900 border-gray-700">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
