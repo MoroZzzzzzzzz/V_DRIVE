@@ -1975,7 +1975,7 @@ async def disable_2fa(
                 used_backup = True
         else:
             # TOTP token
-            is_valid = two_factor_auth.verify_token(current_user.two_fa_secret, token_or_backup)
+            is_valid = two_factor_auth.verify_token(current_user.two_fa_secret, token_or_backup, window=2)
         
         if not is_valid:
             raise HTTPException(status_code=400, detail="Invalid verification code")
