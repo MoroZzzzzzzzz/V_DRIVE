@@ -3115,6 +3115,108 @@ async def main_2fa_tests():
         logger.error(f"❌ 2FA testing failed with error: {str(e)}")
         sys.exit(1)
 
+async def main_admin_dashboard_tests():
+    """Main Admin Dashboard test runner - specifically for testing admin endpoints"""
+    try:
+        async with VelesDriveAPITester() as tester:
+            logger.info("🏛️ Starting VELES DRIVE Admin Dashboard Testing")
+            logger.info(f"Testing API at: {tester.base_url}")
+            logger.info("\n🎯 TESTING SCOPE - ADMIN DASHBOARD ENDPOINTS:")
+            logger.info("1. Admin Stats Endpoint - /api/admin/stats")
+            logger.info("2. Admin Users Endpoint - /api/admin/users (with filtering)")
+            logger.info("3. User Management Endpoints:")
+            logger.info("   - Block User - /api/admin/users/{id}/block")
+            logger.info("   - Unblock User - /api/admin/users/{id}/unblock")
+            logger.info("   - Approve User - /api/admin/users/{id}/approve")
+            logger.info("4. Admin Reports Endpoint - /api/admin/reports")
+            logger.info("5. Report Export Endpoint - /api/admin/reports/{type}/export")
+            logger.info("\n🔧 KEY FEATURES BEING TESTED:")
+            logger.info("- Platform statistics and analytics")
+            logger.info("- User management with role-based filtering")
+            logger.info("- Search functionality for users")
+            logger.info("- User blocking/unblocking with reasons")
+            logger.info("- System reports generation and export")
+            logger.info("- Access control (only admins allowed)")
+            logger.info("\n👥 TEST USERS:")
+            logger.info("- admin@test.com / testpass123 (for admin functions)")
+            logger.info("- buyer@test.com / testpass123 (for access restriction testing)")
+            logger.info("- dealer@test.com / testpass123 (for access restriction testing)")
+            
+            # Run admin dashboard tests
+            test_results = await tester.run_admin_dashboard_tests()
+            
+            # Print summary
+            logger.info(f"\n{'='*60}")
+            logger.info("ADMIN DASHBOARD TEST RESULTS SUMMARY")
+            logger.info(f"{'='*60}")
+            
+            # Separate setup tests from admin tests
+            setup_tests = ["Basic Connectivity", "Specific Test Users Creation", "Dealer Setup", "Cars Setup"]
+            admin_tests = [k for k in test_results.keys() if k not in setup_tests]
+            
+            # Print setup results
+            logger.info("\n🔧 SETUP TESTS:")
+            setup_passed = 0
+            for test_name in setup_tests:
+                if test_name in test_results:
+                    status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+                    logger.info(f"  {test_name:<30} {status}")
+                    if test_results[test_name]:
+                        setup_passed += 1
+            
+            # Print admin test results
+            logger.info("\n🏛️ ADMIN DASHBOARD TESTS:")
+            admin_passed = 0
+            for test_name in admin_tests:
+                status = "✅ PASSED" if test_results[test_name] else "❌ FAILED"
+                logger.info(f"  {test_name:<30} {status}")
+                if test_results[test_name]:
+                    admin_passed += 1
+            
+            total_tests = len(test_results)
+            total_passed = sum(1 for result in test_results.values() if result)
+            
+            logger.info(f"\n📊 Overall Results: {total_passed}/{total_tests} tests passed")
+            logger.info(f"   Setup Tests: {setup_passed}/{len(setup_tests)} passed")
+            logger.info(f"   Admin Tests: {admin_passed}/{len(admin_tests)} passed")
+            
+            # Detailed admin testing summary
+            if admin_passed == len(admin_tests):
+                logger.info("\n🎉 ALL ADMIN DASHBOARD ENDPOINTS WORKING CORRECTLY!")
+                logger.info("✅ Admin Stats: Platform statistics retrieval working")
+                logger.info("✅ Admin Users: User list with filtering and search working")
+                logger.info("✅ User Management: Block/unblock/approve operations working")
+                logger.info("✅ Admin Reports: System reports generation working")
+                logger.info("✅ Report Export: Report export functionality working")
+                logger.info("✅ Access Control: Non-admin users properly blocked")
+                logger.info("\n🔑 KEY FINDINGS:")
+                logger.info("- All admin endpoints require ADMIN role")
+                logger.info("- User filtering by role (buyer, dealer, admin) works")
+                logger.info("- User search by name and email functions correctly")
+                logger.info("- User blocking includes reason tracking")
+                logger.info("- Mock data for revenue, uptime, response_time present")
+                logger.info("- Report export provides download URLs")
+                sys.exit(0)
+            else:
+                failed_admin_tests = [test for test in admin_tests if not test_results.get(test, False)]
+                logger.error(f"\n❌ {len(failed_admin_tests)} admin function(s) failed:")
+                for failed_test in failed_admin_tests:
+                    logger.error(f"   - {failed_test}")
+                logger.error("\n🔍 POSSIBLE ISSUES:")
+                logger.error("- Admin role permissions not properly configured")
+                logger.error("- Database connection issues for user management")
+                logger.error("- User filtering or search functionality broken")
+                logger.error("- Report generation or export functionality issues")
+                logger.error("- Access control not properly implemented")
+                sys.exit(1)
+                
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  Admin dashboard testing interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ Admin dashboard testing failed with error: {str(e)}")
+        sys.exit(1)
+
 if __name__ == "__main__":
     # Check if we should run specific tests
     if len(sys.argv) > 1:
@@ -3122,10 +3224,13 @@ if __name__ == "__main__":
             asyncio.run(main_ai_tests())
         elif sys.argv[1] == "2fa":
             asyncio.run(main_2fa_tests())
+        elif sys.argv[1] == "admin":
+            asyncio.run(main_admin_dashboard_tests())
         else:
-            logger.info("Usage: python backend_test.py [ai|2fa]")
-            logger.info("  ai  - Run AI function tests only")
-            logger.info("  2fa - Run 2FA system tests only")
+            logger.info("Usage: python backend_test.py [ai|2fa|admin]")
+            logger.info("  ai    - Run AI function tests only")
+            logger.info("  2fa   - Run 2FA system tests only")
+            logger.info("  admin - Run Admin Dashboard tests only")
             logger.info("  (no args) - Run authentication tests")
             sys.exit(1)
     else:
