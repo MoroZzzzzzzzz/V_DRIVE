@@ -217,10 +217,11 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
+    console.log('AdminDashboard Debug:', { user, isAuthenticated, authLoading });
     if (user?.role === 'admin') {
       loadAdminData();
     }
-  }, [user]);
+  }, [user, isAuthenticated, authLoading]);
 
   const loadAdminData = async () => {
     try {
