@@ -697,14 +697,14 @@ VELES DRIVE - современная платформа для автомоби�
 
 ## test_plan:
   current_focus:
-    - "Страница дополнительных услуг (/services)"
-    - "Страница настроек безопасности (/security)"
+    - "Расширенная Admin Dashboard (/admin)"
   stuck_tasks:
+    - "Расширенная Admin Dashboard (/admin)"
     - "Страница сравнения автомобилей (/compare)"
     - "CRM панель в ERP системе"
     - "Обновленная навигация с ссылкой Сравнение"
   test_all: false
-  test_priority: "backend_routing_fix"
+  test_priority: "admin_dashboard_routing_fix"
 
 ## agent_communication:
   - agent: "main"
