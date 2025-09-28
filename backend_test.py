@@ -3229,7 +3229,18 @@ class VelesDriveAPITester:
                 success = False
                 continue
             
-            headers = {"Authorization": f"Bearer {login_result['data']['access_token']}"}
+            # Handle different response structures
+            token = None
+            if "access_token" in login_result["data"]:
+                token = login_result["data"]["access_token"]
+            elif "token" in login_result["data"]:
+                token = login_result["data"]["token"]
+            else:
+                logger.error(f"❌ No access token found in login response for {role}: {login_result['data']}")
+                success = False
+                continue
+            
+            headers = {"Authorization": f"Bearer {token}"}
             
             # Test 10: GET /api/telegram/status - статус подключения Telegram
             logger.info(f"🔍 Testing GET /api/telegram/status for {role}...")
