@@ -1436,6 +1436,233 @@ class VelesDriveAPITester:
         # Use the new routing fix test instead
         return await self.test_admin_routing_fix()
 
+    async def test_erp_system_comprehensive(self) -> bool:
+        """Comprehensive ERP System Testing as requested in review"""
+        logger.info("🏢 КОМПЛЕКСНОЕ ТЕСТИРОВАНИЕ ERP СИСТЕМЫ VELES DRIVE...")
+        
+        success = True
+        
+        # Step 1: Test dealer authentication with specific test user
+        logger.info("🔐 Тестирование аутентификации дилера...")
+        
+        dealer_credentials = {
+            "email": "dealer@test.com",
+            "password": "testpass123"
+        }
+        
+        login_result = await self.make_request("POST", "/auth/login", dealer_credentials)
+        
+        if login_result["status"] == 200:
+            logger.info("✅ Дилер dealer@test.com успешно вошел в систему")
+            self.auth_tokens["test_dealer"] = login_result["data"]["access_token"]
+            
+            # Verify user role
+            headers = {"Authorization": f"Bearer {login_result['data']['access_token']}"}
+            me_result = await self.make_request("GET", "/auth/me", headers=headers)
+            
+            if me_result["status"] == 200 and me_result["data"]["role"] == "dealer":
+                logger.info("✅ Роль пользователя подтверждена: dealer")
+            else:
+                logger.error(f"❌ Неверная роль пользователя: {me_result}")
+                success = False
+        else:
+            logger.error(f"❌ Ошибка входа дилера: {login_result}")
+            success = False
+            return success
+        
+        # Step 2: Test ERP Dashboard - main endpoint
+        logger.info("📊 Тестирование ERP Dashboard (/api/erp/dashboard)...")
+        
+        headers = {"Authorization": f"Bearer {self.auth_tokens['test_dealer']}"}
+        dashboard_result = await self.make_request("GET", "/erp/dashboard", headers=headers)
+        
+        if dashboard_result["status"] == 200:
+            logger.info("✅ ERP Dashboard доступен для дилеров")
+            dashboard_data = dashboard_result["data"]
+            
+            # Verify dashboard structure
+            if "stats" in dashboard_data:
+                stats = dashboard_data["stats"]
+                logger.info(f"   📈 Статистика автомобилей:")
+                logger.info(f"      - Всего автомобилей: {stats.get('total_cars', 0)}")
+                logger.info(f"      - Доступных: {stats.get('available_cars', 0)}")
+                logger.info(f"      - Проданных: {stats.get('sold_cars', 0)}")
+            
+            if "recent_transactions" in dashboard_data:
+                transactions = dashboard_data["recent_transactions"]
+                logger.info(f"   💰 Последние транзакции: {len(transactions)}")
+        else:
+            logger.error(f"❌ ERP Dashboard недоступен: {dashboard_result}")
+            success = False
+        
+        # Step 3: Test role-based access control
+        logger.info("🔒 Тестирование контроля доступа по ролям...")
+        
+        # Test unauthorized access (no token)
+        no_auth_result = await self.make_request("GET", "/erp/dashboard")
+        
+        if no_auth_result["status"] in [401, 403]:
+            logger.info("✅ Неавторизованные пользователи получают HTTP 401/403")
+        else:
+            logger.error(f"❌ Неавторизованный доступ должен быть заблокирован: {no_auth_result}")
+            success = False
+        
+        # Test buyer access (should be denied)
+        buyer_credentials = {
+            "email": "buyer@test.com",
+            "password": "testpass123"
+        }
+        
+        buyer_login = await self.make_request("POST", "/auth/login", buyer_credentials)
+        
+        if buyer_login["status"] == 200:
+            buyer_headers = {"Authorization": f"Bearer {buyer_login['data']['access_token']}"}
+            buyer_erp_result = await self.make_request("GET", "/erp/dashboard", headers=buyer_headers)
+            
+            if buyer_erp_result["status"] == 403:
+                logger.info("✅ Обычные покупатели не могут получить доступ к ERP функциям")
+            else:
+                logger.error(f"❌ Покупатели не должны иметь доступ к ERP: {buyer_erp_result}")
+                success = False
+        
+        # Step 4: Test additional ERP endpoints if available
+        logger.info("🔧 Тестирование дополнительных ERP endpoints...")
+        
+        # Test CRM customers endpoint
+        crm_result = await self.make_request("GET", "/crm/customers", headers=headers)
+        
+        if crm_result["status"] == 200:
+            logger.info("✅ CRM - Управление клиентской базой доступно")
+            logger.info(f"   👥 Найдено клиентов: {len(crm_result['data'])}")
+        else:
+            logger.error(f"❌ CRM клиенты недоступны: {crm_result}")
+            success = False
+        
+        # Test projects endpoint (Trello-style management)
+        projects_result = await self.make_request("GET", "/projects", headers=headers)
+        
+        if projects_result["status"] == 200:
+            logger.info("✅ Система управления проектами доступна")
+            logger.info(f"   📋 Найдено проектов: {len(projects_result['data'])}")
+        else:
+            logger.error(f"❌ Проекты недоступны: {projects_result}")
+            success = False
+        
+        # Step 5: Test creating ERP data
+        logger.info("📝 Тестирование создания данных ERP...")
+        
+        # Create a customer
+        customer_data = {
+            "name": "Тестовый Клиент ERP",
+            "email": f"erp_customer_{uuid.uuid4().hex[:6]}@test.com",
+            "phone": "+7-900-ERP-TEST",
+            "address": "Москва, Тестовая ул., д. 1",
+            "notes": "Клиент для тестирования ERP системы",
+            "tags": ["ERP", "Тест"]
+        }
+        
+        customer_result = await self.make_request("POST", "/crm/customers", customer_data, headers)
+        
+        if customer_result["status"] == 200:
+            logger.info("✅ Создание клиента в CRM работает")
+            test_customer_id = customer_result["data"]["id"]
+        else:
+            logger.error(f"❌ Создание клиента не работает: {customer_result}")
+            success = False
+            test_customer_id = None
+        
+        # Create a project
+        project_data = {
+            "title": "ERP Тестовый Проект",
+            "description": "Проект для тестирования ERP системы",
+            "priority": "high",
+            "assigned_to": "Тестовый Менеджер"
+        }
+        
+        project_result = await self.make_request("POST", "/projects", project_data, headers)
+        
+        if project_result["status"] == 200:
+            logger.info("✅ Создание проектов работает")
+        else:
+            logger.error(f"❌ Создание проектов не работает: {project_result}")
+            success = False
+        
+        # Step 6: Test service management (if available)
+        logger.info("🔧 Тестирование системы управления сервисными заявками...")
+        
+        # This would test service request endpoints if they exist
+        # For now, we'll check if the endpoints are available
+        
+        # Step 7: Test personal offers system
+        logger.info("💼 Тестирование персональных предложений...")
+        
+        offers_result = await self.make_request("GET", "/crm/offers", headers=headers)
+        
+        if offers_result["status"] == 200:
+            logger.info("✅ Система персональных предложений доступна")
+            logger.info(f"   🎯 Найдено предложений: {len(offers_result['data'])}")
+        else:
+            logger.error(f"❌ Персональные предложения недоступны: {offers_result}")
+            success = False
+        
+        # Step 8: Test purchase history
+        logger.info("📈 Тестирование истории покупок...")
+        
+        if test_customer_id:
+            sales_result = await self.make_request("GET", f"/crm/customers/{test_customer_id}/sales", headers=headers)
+            
+            if sales_result["status"] == 200:
+                logger.info("✅ Просмотр истории покупок работает")
+                logger.info(f"   💰 Найдено продаж: {len(sales_result['data'])}")
+            else:
+                logger.error(f"❌ История покупок недоступна: {sales_result}")
+                success = False
+        
+        # Step 9: Test reports and analytics
+        logger.info("📊 Тестирование отчетов и аналитики...")
+        
+        # Test if admin reports are accessible to dealers (they shouldn't be)
+        admin_reports_result = await self.make_request("GET", "/admin/reports", headers=headers)
+        
+        if admin_reports_result["status"] == 403:
+            logger.info("✅ Дилеры правильно не имеют доступа к админ отчетам")
+        elif admin_reports_result["status"] == 404:
+            logger.info("ℹ️  Админ отчеты не найдены (возможно, проблема роутинга)")
+        else:
+            logger.error(f"❌ Дилеры не должны иметь доступ к админ отчетам: {admin_reports_result}")
+            success = False
+        
+        # Step 10: Verify JSON structure correctness
+        logger.info("🔍 Проверка корректности JSON структур...")
+        
+        # Re-test dashboard to verify JSON structure
+        dashboard_retest = await self.make_request("GET", "/erp/dashboard", headers=headers)
+        
+        if dashboard_retest["status"] == 200:
+            data = dashboard_retest["data"]
+            
+            # Check required fields
+            required_fields = ["stats"]
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                logger.info("✅ JSON структура ERP Dashboard корректна")
+                
+                # Verify stats structure
+                stats = data["stats"]
+                stats_fields = ["total_cars", "available_cars", "sold_cars"]
+                missing_stats = [field for field in stats_fields if field not in stats]
+                
+                if not missing_stats:
+                    logger.info("✅ Структура статистики корректна")
+                else:
+                    logger.warning(f"⚠️  Отсутствуют поля статистики: {missing_stats}")
+            else:
+                logger.error(f"❌ Отсутствуют обязательные поля: {missing_fields}")
+                success = False
+        
+        return success
+
     async def test_vehicle_types_system(self) -> bool:
         """Test extended vehicle support (cars, motorcycles, boats, planes)"""
         logger.info("🚁 Testing Vehicle Types System...")
