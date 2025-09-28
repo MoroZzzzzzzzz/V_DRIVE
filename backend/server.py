@@ -2403,6 +2403,221 @@ async def export_report(
 app.include_router(api_router)
 app.include_router(payments_router)
 
+# Telegram Bot Integration Endpoints
+@api_router.post("/telegram/connect")
+async def connect_telegram_account(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Connect user account to Telegram bot"""
+    try:
+        connection_code = request.get("connection_code")
+        if not connection_code:
+            raise HTTPException(status_code=400, detail="Connection code is required")
+        
+        # Find connection request
+        connection = await db.telegram_connections.find_one({
+            "connection_code": connection_code,
+            "status": "pending"
+        })
+        
+        if not connection:
+            raise HTTPException(status_code=404, detail="Invalid or expired connection code")
+        
+        # Update user with Telegram info
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": {
+                "telegram_chat_id": connection["telegram_chat_id"],
+                "telegram_user": connection["telegram_user"],
+                "telegram_connected_at": datetime.now(timezone.utc).isoformat(),
+                "telegram_notifications_enabled": True
+            }}
+        )
+        
+        # Mark connection as completed
+        await db.telegram_connections.update_one(
+            {"connection_code": connection_code},
+            {"$set": {"status": "completed", "user_id": current_user.id}}
+        )
+        
+        return {"message": "Telegram account connected successfully"}
+        
+    except Exception as e:
+        logger.error(f"Telegram connect error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to connect Telegram account")
+
+@api_router.post("/telegram/disconnect")
+async def disconnect_telegram_account(current_user: User = Depends(get_current_user)):
+    """Disconnect user account from Telegram bot"""
+    try:
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$unset": {
+                "telegram_chat_id": "",
+                "telegram_user": "",
+                "telegram_connected_at": "",
+                "telegram_notifications_enabled": ""
+            }}
+        )
+        
+        return {"message": "Telegram account disconnected successfully"}
+        
+    except Exception as e:
+        logger.error(f"Telegram disconnect error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to disconnect Telegram account")
+
+@api_router.get("/telegram/status")
+async def get_telegram_status(current_user: User = Depends(get_current_user)):
+    """Get Telegram connection status"""
+    try:
+        user_data = await db.users.find_one({"id": current_user.id})
+        
+        is_connected = bool(user_data.get("telegram_chat_id"))
+        
+        return {
+            "connected": is_connected,
+            "chat_id": user_data.get("telegram_chat_id"),
+            "username": user_data.get("telegram_user", {}).get("username"),
+            "connected_at": user_data.get("telegram_connected_at"),
+            "notifications_enabled": user_data.get("telegram_notifications_enabled", True)
+        }
+        
+    except Exception as e:
+        logger.error(f"Telegram status error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get Telegram status")
+
+@api_router.post("/telegram/generate-code")
+async def generate_telegram_connection_code(current_user: User = Depends(get_current_user)):
+    """Generate new Telegram connection code"""
+    try:
+        # Check if user already has active connection
+        existing_user = await db.users.find_one({
+            "id": current_user.id,
+            "telegram_chat_id": {"$exists": True}
+        })
+        
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Telegram account already connected")
+        
+        # Generate new connection code
+        connection_code = str(uuid.uuid4())[:8].upper()
+        
+        # Remove any existing pending connections for this user
+        await db.telegram_connections.delete_many({
+            "user_id": current_user.id,
+            "status": "pending"
+        })
+        
+        # Create new connection request
+        await db.telegram_connections.insert_one({
+            "connection_code": connection_code,
+            "user_id": current_user.id,
+            "user_email": current_user.email,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+            "status": "pending"
+        })
+        
+        return {
+            "connection_code": connection_code,
+            "expires_in": 600,  # 10 minutes
+            "bot_username": "VelesDriveBot",
+            "instructions": f"Перейдите в Telegram и отправьте боту команду: /start {connection_code}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Generate Telegram code error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate connection code")
+
+@api_router.post("/telegram/send-notification")
+async def send_telegram_notification(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Send notification via Telegram (admin only)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can send notifications")
+    
+    try:
+        user_ids = request.get("user_ids", [])
+        message = request.get("message", "")
+        message_type = request.get("type", "info")
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        sent_count = 0
+        failed_count = 0
+        
+        # Get users with Telegram integration
+        users_query = {"telegram_chat_id": {"$exists": True}}
+        if user_ids:
+            users_query["id"] = {"$in": user_ids}
+        
+        users = await db.users.find(users_query).to_list(length=None)
+        
+        # Use TelegramService from integrations
+        from integrations import TelegramService
+        telegram_service = TelegramService()
+        
+        for user in users:
+            if user.get("telegram_notifications_enabled", True):
+                try:
+                    await telegram_service.send_message(
+                        user["telegram_chat_id"],
+                        message
+                    )
+                    sent_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send Telegram notification to user {user['id']}: {e}")
+                    failed_count += 1
+        
+        return {
+            "message": "Notifications sent",
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+            "total_users": len(users)
+        }
+        
+    except Exception as e:
+        logger.error(f"Send Telegram notification error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send notifications")
+
+@api_router.get("/telegram/users")
+async def get_telegram_users(
+    current_user: User = Depends(get_current_user)
+):
+    """Get users with Telegram integration (admin only)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can view Telegram users")
+    
+    try:
+        users = await db.users.find({
+            "telegram_chat_id": {"$exists": True}
+        }).to_list(length=None)
+        
+        telegram_users = []
+        for user in users:
+            telegram_users.append({
+                "user_id": user["id"],
+                "email": user["email"],
+                "full_name": user.get("full_name"),
+                "role": user["role"],
+                "telegram_username": user.get("telegram_user", {}).get("username"),
+                "connected_at": user.get("telegram_connected_at"),
+                "notifications_enabled": user.get("telegram_notifications_enabled", True)
+            })
+        
+        return {
+            "users": telegram_users,
+            "total_count": len(telegram_users)
+        }
+        
+    except Exception as e:
+        logger.error(f"Get Telegram users error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get Telegram users")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
