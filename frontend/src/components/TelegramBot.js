@@ -110,20 +110,7 @@ const TelegramBot = () => {
     }
   };
 
-  const sendTestNotification = async () => {
-    if (!botConnected) {
-      toast.error('Сначала подключите Telegram');
-      return;
-    }
-
-    try {
-      // In real app would send notification through backend to Telegram API
-      toast.success('Тестовое уведомление отправлено в Telegram!');
-    } catch (error) {
-      console.error('Error sending test notification:', error);
-      toast.error('Ошибка отправки уведомления');
-    }
-  };
+  // sendTestNotification function removed - not needed in new version
 
   if (!isAuthenticated) {
     return null;
