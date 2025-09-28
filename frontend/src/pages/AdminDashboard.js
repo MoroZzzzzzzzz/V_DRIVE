@@ -281,11 +281,12 @@ const AdminDashboard = () => {
   };
 
   const tabs = [
-    { id: 'overview', label: 'Обзор', icon: 'fas fa-chart-pie' },
-    { id: 'moderation', label: 'Модерация', icon: 'fas fa-gavel', count: pendingItems.length },
-    { id: 'users', label: 'Пользователи', icon: 'fas fa-users' },
-    { id: 'reports', label: 'Отчеты', icon: 'fas fa-file-alt' },
-    { id: 'settings', label: 'Настройки', icon: 'fas fa-cog' }
+    { id: 'overview', label: 'Обзор', icon: BarChart3 },
+    { id: 'users', label: 'Пользователи', icon: Users, count: users.filter(u => u.status === 'pending').length },
+    { id: 'moderation', label: 'Модерация', icon: Shield, count: pendingItems.length },
+    { id: 'analytics', label: 'Аналитика', icon: TrendingUp },
+    { id: 'reports', label: 'Отчеты', icon: Activity },
+    { id: 'settings', label: 'Настройки', icon: Settings }
   ];
 
   const renderOverview = () => (
