@@ -1167,10 +1167,16 @@ class VelesDriveAPITester:
         logger.info("🏛️ Testing Extended Admin Dashboard...")
         
         # Use existing admin token or create one
-        if "admin" not in self.auth_tokens:
+        admin_token_key = None
+        if "specific_admin" in self.auth_tokens:
+            admin_token_key = "specific_admin"
+        elif "admin" in self.auth_tokens:
+            admin_token_key = "admin"
+        else:
             await self.test_admin_panel()  # This will create admin user
+            admin_token_key = "admin"
         
-        if "admin" not in self.auth_tokens:
+        if admin_token_key not in self.auth_tokens:
             logger.error("❌ No admin token available for extended testing")
             return False
         
