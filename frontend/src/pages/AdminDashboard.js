@@ -244,7 +244,7 @@ const AdminDashboard = () => {
       const reportsResponse = await axios.get(`${backendUrl}/api/admin/reports`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setReports(reportsResponse.data);
+      setReports(reportsResponse.data.reports || []);
       
       // Set mock pending items for now (can be extended later)
       setPendingItems(mockPendingItems);
