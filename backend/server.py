@@ -1955,10 +1955,6 @@ async def get_vehicles_stats():
     
     return stats
 
-# Include routers
-app.include_router(api_router)
-app.include_router(payments_router)
-
 # Additional Services Endpoints
 @api_router.post("/services/insurance/quote")
 async def get_insurance_quote(
