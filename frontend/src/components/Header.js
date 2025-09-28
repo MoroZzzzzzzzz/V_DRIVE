@@ -24,6 +24,7 @@ const Header = () => {
     { path: '/premium', label: 'Премиум', icon: 'fas fa-crown' },
     { path: '/auctions', label: 'Аукционы', icon: 'fas fa-gavel' },
     { path: '/dealers', label: 'Дилеры', icon: 'fas fa-store' },
+    { path: '/services', label: 'Услуги', icon: 'fas fa-concierge-bell' },
   ];
 
   const userNavigationItems = [
