@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Test configuration
-BASE_URL = "https://velesdrive.preview.emergentagent.com/api"
+BASE_URL = "https://veles-auto-hub.preview.emergentagent.com/api"
 TEST_TIMEOUT = 30
 
 class VelesDriveAPITester:

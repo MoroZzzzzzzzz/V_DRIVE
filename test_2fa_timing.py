@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://velesdrive.preview.emergentagent.com/api"
+BASE_URL = "https://veles-auto-hub.preview.emergentagent.com/api"
 
 class TwoFATimingTester:
     """Specialized tester for 2FA timing synchronization fixes"""
