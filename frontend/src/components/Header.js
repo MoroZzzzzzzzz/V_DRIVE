@@ -217,17 +217,37 @@ const Header = () => {
           <div className="lg:hidden border-t border-gold/20 bg-black/95">
             <nav className="py-4 space-y-2">
               {navigationItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`block px-4 py-3 text-white hover:text-gold hover:bg-gray-900/50 rounded ${
-                    isActive(item.path) ? 'bg-gold/10 text-gold' : ''
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <i className={`${item.icon} mr-3`}></i>
-                  {item.label}
-                </Link>
+                item.submenu ? (
+                  <div key={item.label}>
+                    <div className="px-4 py-2 text-gray-400 text-sm font-medium border-b border-gray-800">
+                      <i className={`${item.icon} mr-2`}></i>
+                      {item.label}
+                    </div>
+                    {item.submenu.map((subItem) => (
+                      <Link
+                        key={subItem.path}
+                        to={subItem.path}
+                        className="block px-8 py-3 text-white hover:text-gold hover:bg-gray-900/50 rounded"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <span className="mr-2">{subItem.label.split(' ')[0]}</span>
+                        {subItem.label.split(' ').slice(1).join(' ')}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`block px-4 py-3 text-white hover:text-gold hover:bg-gray-900/50 rounded ${
+                      isActive(item.path) ? 'bg-gold/10 text-gold' : ''
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <i className={`${item.icon} mr-3`}></i>
+                    {item.label}
+                  </Link>
+                )
               ))}
               
               {user && userNavigationItems.map((item) => (
