@@ -290,6 +290,9 @@ const ERPDashboard = () => {
           {activeTab === 'projects' && <ProjectsManagement />}
           {activeTab === 'clients' && <ClientsManagement />}
           {activeTab === 'crm' && <CRMPanel />}
+          {activeTab === 'service' && <ServiceManagement />}
+          {activeTab === 'offers' && <PersonalizedOffers />}
+          {activeTab === 'history' && <PurchaseHistory />}
           {activeTab === 'finance' && renderPlaceholder('Финансы', 'fas fa-coins')}
           {activeTab === 'reports' && <AdvancedReports />}
         </div>
