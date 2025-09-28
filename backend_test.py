@@ -4183,6 +4183,123 @@ async def main_erp_tests():
         logger.error(f"❌ ERP testing failed with error: {str(e)}")
         sys.exit(1)
 
+async def main_review_request_tests():
+    """Main function for testing specific endpoints mentioned in review request"""
+    logger.info("🎯 ЗАПУСК ТЕСТИРОВАНИЯ СОГЛАСНО REVIEW REQUEST")
+    logger.info("="*80)
+    logger.info("НОВЫЕ ADMIN ENDPOINTS:")
+    logger.info("1. GET /api/admin/stats - получение статистики админа")
+    logger.info("2. GET /api/admin/users - список всех пользователей для админа")
+    logger.info("3. POST /api/admin/users/{user_id}/block - блокировка пользователя")
+    logger.info("4. POST /api/admin/users/{user_id}/unblock - разблокировка пользователя")
+    logger.info("5. POST /api/admin/users/{user_id}/approve - одобрение пользователя")
+    logger.info("6. GET /api/admin/reports - получение отчетов")
+    logger.info("7. POST /api/admin/reports/{report_type}/export - экспорт отчетов")
+    logger.info("8. POST /api/admin/moderation/approve - одобрение модерируемого контента")
+    logger.info("9. POST /api/admin/moderation/reject - отклонение модерируемого контента")
+    logger.info("")
+    logger.info("EXISTING TELEGRAM BOT ENDPOINTS (повторное тестирование):")
+    logger.info("10. GET /api/telegram/status - статус подключения Telegram")
+    logger.info("11. POST /api/telegram/generate-code - создание кода подключения")
+    logger.info("12. POST /api/telegram/connect - подключение Telegram аккаунта")
+    logger.info("")
+    logger.info("ТЕСТОВЫЕ ПОЛЬЗОВАТЕЛИ:")
+    logger.info("- Админ: admin@test.com / testpass123 (роль: admin)")
+    logger.info("- Дилер: dealer@test.com / testpass123 (роль: dealer)")
+    logger.info("- Покупатель: buyer@test.com / testpass123 (роль: buyer)")
+    logger.info("="*80)
+    
+    try:
+        async with VelesDriveAPITester() as tester:
+            # Test basic connectivity first
+            if not await tester.test_basic_connectivity():
+                logger.error("❌ Basic connectivity failed. Cannot proceed with testing.")
+                sys.exit(1)
+            
+            # Create specific test users as mentioned in review request
+            logger.info("\n🔧 Creating specific test users as mentioned in review request...")
+            if not await tester.create_specific_admin_test_users():
+                logger.error("❌ Failed to create specific test users. Cannot proceed.")
+                sys.exit(1)
+            
+            # Run the specific tests requested
+            test_results = {}
+            
+            # Test 1: New Admin Endpoints
+            logger.info("\n" + "="*60)
+            logger.info("🏛️ ТЕСТИРОВАНИЕ НОВЫХ ADMIN ENDPOINTS")
+            logger.info("="*60)
+            
+            admin_success = await tester.test_new_admin_endpoints()
+            test_results["New Admin Endpoints"] = admin_success
+            
+            if admin_success:
+                logger.info("✅ Все новые admin endpoints работают корректно")
+            else:
+                logger.error("❌ Некоторые admin endpoints не работают")
+            
+            # Test 2: Telegram Bot Endpoints
+            logger.info("\n" + "="*60)
+            logger.info("🤖 ТЕСТИРОВАНИЕ TELEGRAM BOT ENDPOINTS")
+            logger.info("="*60)
+            
+            telegram_success = await tester.test_telegram_bot_endpoints_comprehensive()
+            test_results["Telegram Bot Endpoints"] = telegram_success
+            
+            if telegram_success:
+                logger.info("✅ Все Telegram bot endpoints работают корректно")
+            else:
+                logger.error("❌ Некоторые Telegram endpoints не работают")
+            
+            # Print final summary
+            logger.info("\n" + "="*80)
+            logger.info("📊 ИТОГОВЫЕ РЕЗУЛЬТАТЫ ТЕСТИРОВАНИЯ")
+            logger.info("="*80)
+            
+            total_passed = sum(1 for result in test_results.values() if result)
+            total_tests = len(test_results)
+            
+            for test_name, result in test_results.items():
+                status = "✅ ПРОШЕЛ" if result else "❌ НЕ ПРОШЕЛ"
+                logger.info(f"{test_name:<30} {status}")
+            
+            logger.info(f"\n📈 Общий результат: {total_passed}/{total_tests} тестов прошли успешно")
+            
+            if total_passed == total_tests:
+                logger.info("\n🎉 ВСЕ ТЕСТЫ ПРОШЛИ УСПЕШНО!")
+                logger.info("✅ Новые admin endpoints работают корректно")
+                logger.info("✅ Telegram bot endpoints работают корректно")
+                logger.info("✅ Контроль доступа настроен правильно")
+                logger.info("✅ JSON структуры ответов корректны")
+                logger.info("✅ Аутентификация и авторизация работают")
+                logger.info("\n🔑 КЛЮЧЕВЫЕ ВЫВОДЫ:")
+                logger.info("- Только админы имеют доступ к admin/* endpoints")
+                logger.info("- Обычные пользователи получают HTTP 403 для admin функций")
+                logger.info("- Все роли пользователей могут использовать Telegram endpoints")
+                logger.info("- Блокировка/разблокировка пользователей работает")
+                logger.info("- Модерационные функции доступны")
+                logger.info("- Telegram bot endpoints готовы к интеграции")
+                sys.exit(0)
+            else:
+                failed_tests = [name for name, result in test_results.items() if not result]
+                logger.error(f"\n❌ {len(failed_tests)} ТЕСТ(ОВ) НЕ ПРОШЛИ:")
+                for failed_test in failed_tests:
+                    logger.error(f"   - {failed_test}")
+                logger.error("\n🔍 ВОЗМОЖНЫЕ ПРОБЛЕМЫ:")
+                logger.error("- Проблемы с правами доступа admin роли")
+                logger.error("- Ошибки в backend routing или endpoints")
+                logger.error("- Проблемы с аутентификацией или авторизацией")
+                logger.error("- Ошибки в JSON структурах ответов")
+                logger.error("- Проблемы с интеграцией Telegram bot")
+                sys.exit(1)
+                
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  Тестирование прервано пользователем")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ Тестирование завершилось с ошибкой: {str(e)}")
+        sys.exit(1)
+
 if __name__ == "__main__":
     # Check if we should run specific tests
     if len(sys.argv) > 1:
