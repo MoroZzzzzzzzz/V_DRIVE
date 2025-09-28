@@ -389,23 +389,34 @@ const CatalogPage = () => {
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
-                          <Link to={`/car/${car.id}`} className="flex-1">
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Link to={`/car/${car.id}`} className="flex-1">
+                              <Button 
+                                className="w-full btn-outline-gold text-sm"
+                                onClick={() => recordCarView(car.id)}
+                              >
+                                <Eye size={16} className="mr-1" />
+                                Подробнее
+                              </Button>
+                            </Link>
                             <Button 
-                              className="w-full btn-outline-gold text-sm"
-                              onClick={() => recordCarView(car.id)}
+                              variant="ghost" 
+                              size="sm"
+                              className="text-gray-400 hover:text-gold"
                             >
-                              <Eye size={16} className="mr-1" />
-                              Подробнее
+                              <Heart size={16} />
+                            </Button>
+                          </div>
+                          <Link 
+                            to={`/services?carId=${car.id}&price=${car.price}&brand=${car.brand}&model=${car.model}`}
+                            className="w-full"
+                          >
+                            <Button className="w-full bg-yellow-600 text-black hover:bg-yellow-700 text-sm">
+                              <i className="fas fa-concierge-bell mr-2"></i>
+                              Услуги
                             </Button>
                           </Link>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-gray-400 hover:text-gold"
-                          >
-                            <Heart size={16} />
-                          </Button>
                         </div>
                       </div>
                     </Card>
