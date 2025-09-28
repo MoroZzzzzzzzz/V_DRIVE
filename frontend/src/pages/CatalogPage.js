@@ -180,6 +180,15 @@ const CatalogPage = () => {
   ];
 
   useEffect(() => {
+    // Check URL params for vehicle type
+    const urlParams = new URLSearchParams(window.location.search);
+    const typeParam = urlParams.get('type');
+    if (typeParam && ['car', 'motorcycle', 'boat', 'plane'].includes(typeParam)) {
+      setFilters(prev => ({ ...prev, vehicleType: typeParam }));
+    }
+  }, []);
+
+  useEffect(() => {
     loadCars();
   }, [filters]);
 
