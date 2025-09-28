@@ -3343,8 +3343,9 @@ class VelesDriveAPITester:
         # Test access control - ensure only admins can access admin endpoints
         logger.info("🔒 Testing access control for Telegram admin endpoints...")
         
-        # Test with buyer credentials
-        buyer_login = {"email": "buyer@test.com", "password": "testpass123"}
+        # Test with buyer credentials - use fresh buyer if available
+        buyer_email = test_roles[2][1] if len(test_roles) > 2 else "buyer@test.com"
+        buyer_login = {"email": buyer_email, "password": "testpass123"}
         buyer_result = await self.make_request("POST", "/auth/login", buyer_login)
         
         if buyer_result["status"] == 200:
