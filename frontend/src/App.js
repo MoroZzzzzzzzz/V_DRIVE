@@ -56,6 +56,7 @@ function App() {
                 <Route path="/compare" element={<ComparisonPage />} />
                 <Route path="/security" element={<SecuritySettingsPage />} />
                 <Route path="/services" element={<AdditionalServicesPage />} />
+                <Route path="/telegram" element={<TelegramBotPage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
