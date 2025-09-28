@@ -2362,6 +2362,268 @@ async def apply_for_lease(
         logger.error(f"Lease application error: {e}")
         raise HTTPException(status_code=400, detail="Failed to process lease application")
 
+# Admin Management Endpoints
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: User = Depends(get_current_user)):
+    """Get admin dashboard statistics"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access statistics")
+    
+    try:
+        # Get user statistics
+        total_users = await db.users.count_documents({})
+        total_dealers = await db.users.count_documents({"role": "dealer"})
+        total_buyers = await db.users.count_documents({"role": "buyer"})
+        blocked_users = await db.users.count_documents({"status": "blocked"})
+        new_registrations = await db.users.count_documents({
+            "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+        })
+        
+        # Get car statistics
+        total_cars = await db.cars.count_documents({})
+        premium_cars = await db.cars.count_documents({"is_premium": True})
+        
+        # Get transaction statistics (mock for now)
+        stats = {
+            "total_users": total_users,
+            "total_dealers": total_dealers,
+            "total_buyers": total_buyers,
+            "total_cars": total_cars,
+            "premium_cars": premium_cars,
+            "blocked_users": blocked_users,
+            "new_registrations": new_registrations,
+            "monthly_revenue": 2856000,  # Mock value
+            "active_sessions": 312,  # Mock value
+            "server_uptime": 99.8,  # Mock value
+            "avg_response_time": 142,  # Mock value
+            "total_views": 45621,  # Mock value
+            "conversion_rate": 3.2,  # Mock value
+            "premium_users": 156,  # Mock value
+            "reported_content": 8,  # Mock value
+            "system_alerts": 3  # Mock value
+        }
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Admin stats error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get admin statistics")
+
+@api_router.get("/admin/users")
+async def get_all_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: str = Query(None),
+    role_filter: str = Query(None),
+    status_filter: str = Query(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all users for admin management"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access user list")
+    
+    try:
+        # Build filter
+        filter_query = {}
+        
+        if search:
+            filter_query["$or"] = [
+                {"full_name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if role_filter and role_filter != "all":
+            filter_query["role"] = role_filter
+            
+        if status_filter and status_filter != "all":
+            filter_query["status"] = status_filter
+        
+        # Get users
+        users_cursor = db.users.find(filter_query).skip(skip).limit(limit)
+        users = await users_cursor.to_list(length=None)
+        
+        # Count total
+        total = await db.users.count_documents(filter_query)
+        
+        return {
+            "users": [User(**user) for user in users],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"Get users error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get users")
+
+@api_router.post("/admin/users/{user_id}/block")
+async def block_user(
+    user_id: str,
+    reason: str = Query(..., description="Reason for blocking"),
+    current_user: User = Depends(get_current_user)
+):
+    """Block a user"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can block users")
+    
+    try:
+        result = await db.users.update_one(
+            {"id": user_id, "role": {"$ne": "admin"}},  # Can't block admins
+            {"$set": {
+                "status": "blocked",
+                "block_reason": reason,
+                "blocked_at": datetime.now(timezone.utc).isoformat(),
+                "blocked_by": current_user.id
+            }}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found or cannot be blocked")
+        
+        return {"message": "User blocked successfully"}
+        
+    except Exception as e:
+        logger.error(f"Block user error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to block user")
+
+@api_router.post("/admin/users/{user_id}/unblock")
+async def unblock_user(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Unblock a user"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can unblock users")
+    
+    try:
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "status": "active",
+                "unblocked_at": datetime.now(timezone.utc).isoformat(),
+                "unblocked_by": current_user.id
+            },
+            "$unset": {
+                "block_reason": "",
+                "blocked_at": "",
+                "blocked_by": ""
+            }}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"message": "User unblocked successfully"}
+        
+    except Exception as e:
+        logger.error(f"Unblock user error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to unblock user")
+
+@api_router.post("/admin/users/{user_id}/approve")
+async def approve_user(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Approve a pending user"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can approve users")
+    
+    try:
+        result = await db.users.update_one(
+            {"id": user_id, "status": "pending"},
+            {"$set": {
+                "status": "active",
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "approved_by": current_user.id
+            }}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Pending user not found")
+        
+        return {"message": "User approved successfully"}
+        
+    except Exception as e:
+        logger.error(f"Approve user error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve user")
+
+@api_router.get("/admin/reports")
+async def get_admin_reports(current_user: User = Depends(get_current_user)):
+    """Get admin reports"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can access reports")
+    
+    try:
+        # Mock reports data - in real implementation, these would be generated from actual data
+        reports = [
+            {
+                "id": str(uuid.uuid4()),
+                "type": "security",
+                "title": "Отчет по безопасности",
+                "description": "Еженедельный отчет по безопасности системы",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "completed",
+                "data": {
+                    "failed_logins": 45,
+                    "blocked_ips": 12,
+                    "security_alerts": 3
+                }
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "type": "sales",
+                "title": "Отчет по продажам",
+                "description": "Месячный отчет по продажам и транзакциям",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "completed",
+                "data": {
+                    "total_sales": 156,
+                    "revenue": 2856000,
+                    "top_dealers": ["Премиум Авто", "Элит Моторс"]
+                }
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "type": "system",
+                "title": "Системный отчет",
+                "description": "Производительность и мониторинг системы",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "generating",
+                "data": {
+                    "uptime": 99.8,
+                    "response_time": 142,
+                    "active_sessions": 312
+                }
+            }
+        ]
+        
+        return {"reports": reports}
+        
+    except Exception as e:
+        logger.error(f"Get reports error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get reports")
+
+@api_router.post("/admin/reports/{report_type}/export")
+async def export_report(
+    report_type: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Export admin report"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can export reports")
+    
+    try:
+        # Mock export functionality
+        return {
+            "message": f"Report '{report_type}' exported successfully",
+            "download_url": f"/api/admin/downloads/{report_type}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Export report error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export report")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
