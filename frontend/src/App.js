@@ -52,6 +52,7 @@ function App() {
                 <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/auctions" element={<AuctionPage />} />
                 <Route path="/compare" element={<ComparisonPage />} />
+                <Route path="/security" element={<SecuritySettingsPage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
