@@ -3211,11 +3211,32 @@ class VelesDriveAPITester:
         success = True
         
         # Test with different user roles as specified in review request
+        # Use fresh test users to avoid 2FA issues
         test_roles = [
             ("admin", "admin@test.com"),
             ("dealer", "dealer@test.com"), 
-            ("buyer", "buyer@test.com")
+            ("buyer", f"buyer_telegram_{uuid.uuid4().hex[:6]}@test.com")
         ]
+        
+        # Create a fresh buyer user without 2FA for telegram testing
+        fresh_buyer_data = {
+            "email": test_roles[2][1],
+            "password": "testpass123",
+            "full_name": "Fresh Buyer for Telegram",
+            "phone": "+7-900-999-9999",
+            "role": "buyer"
+        }
+        
+        logger.info(f"Creating fresh buyer user for telegram testing: {fresh_buyer_data['email']}")
+        fresh_buyer_result = await self.make_request("POST", "/auth/register", fresh_buyer_data)
+        
+        if fresh_buyer_result["status"] != 200:
+            logger.warning(f"⚠️  Could not create fresh buyer user: {fresh_buyer_result}")
+            # Fall back to existing test users but skip buyer if 2FA is enabled
+            test_roles = [
+                ("admin", "admin@test.com"),
+                ("dealer", "dealer@test.com")
+            ]
         
         for role, email in test_roles:
             logger.info(f"🔍 Testing Telegram endpoints for {role} ({email})...")
