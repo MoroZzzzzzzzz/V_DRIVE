@@ -201,7 +201,11 @@ const CatalogPage = () => {
       setCars(response.data);
     } catch (error) {
       console.log('Using mock data for catalog');
-      setCars(mockCars);
+      // Filter mock data based on vehicleType
+      const filteredMockCars = mockCars.filter(car => 
+        car.vehicle_type === filters.vehicleType
+      );
+      setCars(filteredMockCars);
     } finally {
       setLoading(false);
     }
