@@ -237,6 +237,17 @@ const AdminDashboard = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="pt-20 min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
+          <p className="text-gray-400 mt-4">Проверка доступа...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
