@@ -1614,6 +1614,7 @@ class VelesDriveAPITester:
         
         # Try multiple times with fresh tokens to handle timing issues
         verification_success = False
+        result = None
         for attempt in range(3):
             valid_token = totp.now()
             logger.info(f"Generated TOTP token (attempt {attempt + 1}): {valid_token}")
@@ -1636,7 +1637,7 @@ class VelesDriveAPITester:
                 # Other error, break
                 break
         
-        if result["status"] == 200:
+        if verification_success and result["status"] == 200:
             verify_data = result["data"]
             logger.info("✅ 2FA verification successful")
             
