@@ -1215,11 +1215,24 @@ class VelesDriveAPITester:
         
         if result["status"] == 200:
             users_data = result["data"]
-            logger.info(f"✅ Retrieved {len(users_data['users'])} users")
-            logger.info(f"   Total users: {users_data['total']}")
+            # Handle both possible response structures
+            if isinstance(users_data, list):
+                # Direct list response
+                logger.info(f"✅ Retrieved {len(users_data)} users (direct list)")
+                users_list = users_data
+            elif isinstance(users_data, dict) and "users" in users_data:
+                # Wrapped response
+                logger.info(f"✅ Retrieved {len(users_data['users'])} users")
+                logger.info(f"   Total users: {users_data['total']}")
+                users_list = users_data["users"]
+            else:
+                logger.error(f"❌ Unexpected users data structure: {type(users_data)}")
+                success = False
+                users_list = []
         else:
             logger.error(f"❌ Admin users list failed: {result}")
             success = False
+            users_list = []
         
         # Test filtering by role
         for role in ["buyer", "dealer", "admin"]:
