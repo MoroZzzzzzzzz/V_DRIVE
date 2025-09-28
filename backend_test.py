@@ -2685,9 +2685,83 @@ async def main_ai_tests():
         logger.error(f"❌ AI testing failed with error: {str(e)}")
         sys.exit(1)
 
+async def main_2fa_tests():
+    """Main 2FA test runner - specifically for testing 2FA functionality"""
+    try:
+        async with VelesDriveAPITester() as tester:
+            logger.info("🔐 Starting VELES DRIVE 2FA (Two-Factor Authentication) Testing")
+            logger.info(f"Testing API at: {tester.base_url}")
+            logger.info("\n🎯 TESTING SCOPE:")
+            logger.info("1. 2FA Setup Endpoint - /api/security/2fa/setup")
+            logger.info("2. 2FA Verification Endpoint - /api/security/2fa/verify-setup")
+            logger.info("3. 2FA Disable Endpoint - /api/security/2fa/disable")
+            logger.info("4. Backup Codes Regeneration - /api/security/2fa/regenerate-backup-codes")
+            logger.info("5. Audit Log Endpoint - /api/security/audit-log")
+            logger.info("6. Login with 2FA - /api/auth/login")
+            logger.info("\n👥 TEST USERS:")
+            logger.info("- buyer@test.com / testpass123")
+            logger.info("- dealer@test.com / testpass123")
+            logger.info("- admin@test.com / testpass123")
+            
+            # Test basic connectivity first
+            connectivity_ok = await tester.test_basic_connectivity()
+            if not connectivity_ok:
+                logger.error("❌ Basic connectivity failed. Cannot proceed with 2FA testing.")
+                sys.exit(1)
+            
+            # Run 2FA comprehensive tests
+            test_results = await tester.test_2fa_system_comprehensive()
+            
+            # Print summary
+            logger.info(f"\n{'='*60}")
+            logger.info("2FA SYSTEM TEST RESULTS SUMMARY")
+            logger.info(f"{'='*60}")
+            
+            if test_results:
+                logger.info("\n🎉 ALL 2FA FUNCTIONS WORKING CORRECTLY!")
+                logger.info("✅ 2FA Setup: QR code and secret generation working")
+                logger.info("✅ 2FA Verification: Token validation and backup codes working")
+                logger.info("✅ 2FA Login: Authentication with 2FA tokens and backup codes working")
+                logger.info("✅ 2FA Disable: Secure disabling with password and token working")
+                logger.info("✅ Backup Codes: Regeneration and validation working")
+                logger.info("✅ Audit Log: Security activity tracking working")
+                logger.info("\n🔑 KEY FINDINGS:")
+                logger.info("- pyotp library integration is functional")
+                logger.info("- QR code generation working correctly")
+                logger.info("- Backup codes format and validation correct")
+                logger.info("- Security audit logging operational")
+                logger.info("- All 2FA endpoints respond correctly")
+                logger.info("- Permission controls properly implemented")
+                sys.exit(0)
+            else:
+                logger.error("\n❌ 2FA SYSTEM TESTING FAILED")
+                logger.error("\n🔍 POSSIBLE ISSUES:")
+                logger.error("- pyotp library not properly installed")
+                logger.error("- QR code generation library issues")
+                logger.error("- Database connection problems")
+                logger.error("- Authentication or permission issues")
+                logger.error("- Backend 2FA service configuration problems")
+                sys.exit(1)
+                
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  2FA testing interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ 2FA testing failed with error: {str(e)}")
+        sys.exit(1)
+
 if __name__ == "__main__":
-    # Check if we should run AI tests specifically
-    if len(sys.argv) > 1 and sys.argv[1] == "ai":
-        asyncio.run(main_ai_tests())
+    # Check if we should run specific tests
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "ai":
+            asyncio.run(main_ai_tests())
+        elif sys.argv[1] == "2fa":
+            asyncio.run(main_2fa_tests())
+        else:
+            logger.info("Usage: python backend_test.py [ai|2fa]")
+            logger.info("  ai  - Run AI function tests only")
+            logger.info("  2fa - Run 2FA system tests only")
+            logger.info("  (no args) - Run authentication tests")
+            sys.exit(1)
     else:
         asyncio.run(main())
