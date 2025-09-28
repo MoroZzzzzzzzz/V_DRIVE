@@ -2605,7 +2605,8 @@ class VelesDriveAPITester:
             ("Additional Services", self.test_additional_services),
             ("Admin Panel", self.test_admin_panel),
             ("Vehicle Types System", self.test_vehicle_types_system),
-            ("AI System Comprehensive", self.test_ai_system_comprehensive)
+            ("AI System Comprehensive", self.test_ai_system_comprehensive),
+            ("Telegram Bot Integration", self.test_telegram_bot_integration)
         ]
         
         for test_name, test_func in tests:
