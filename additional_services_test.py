@@ -98,27 +98,28 @@ class AdditionalServicesAPITester:
         """Setup test users as specified in the review request"""
         logger.info("🔧 Setting up test users...")
         
-        # Test users as specified in the review request
+        # Create unique test users for this test session to avoid 2FA issues
+        unique_id = uuid.uuid4().hex[:8]
         test_users_data = [
             {
-                "email": "buyer@test.com",
+                "email": f"test_buyer_services_{unique_id}@test.com",
                 "password": "testpass123",
-                "full_name": "Тест Покупатель",
+                "full_name": "Тест Покупатель Услуги",
                 "phone": "+7-900-123-4567",
                 "role": "buyer"
             },
             {
-                "email": "dealer@test.com",
+                "email": f"test_dealer_services_{unique_id}@test.com",
                 "password": "testpass123",
-                "full_name": "Тест Дилер",
+                "full_name": "Тест Дилер Услуги",
                 "phone": "+7-900-765-4321",
                 "role": "dealer",
-                "company_name": "Тест Автосалон"
+                "company_name": "Тест Автосалон Услуги"
             },
             {
-                "email": "admin@test.com",
+                "email": f"test_admin_services_{unique_id}@test.com",
                 "password": "testpass123",
-                "full_name": "Тест Администратор",
+                "full_name": "Тест Администратор Услуги",
                 "phone": "+7-900-555-0000",
                 "role": "admin"
             }
