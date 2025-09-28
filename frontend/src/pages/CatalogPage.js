@@ -512,22 +512,62 @@ const CatalogPage = () => {
                         </div>
 
                         <div className="space-y-2 mb-4">
+                          {/* Universal fields */}
                           <div className="flex items-center text-gray-400 text-sm">
-                            <i className="fas fa-tachometer-alt w-4 mr-2"></i>
-                            <span>{car.mileage?.toLocaleString()} км</span>
-                          </div>
-                          <div className="flex items-center text-gray-400 text-sm">
-                            <i className="fas fa-cog w-4 mr-2"></i>
-                            <span>{car.transmission}</span>
+                            <i className="fas fa-map-marker-alt w-4 mr-2"></i>
+                            <span>{car.location}</span>
                           </div>
                           <div className="flex items-center text-gray-400 text-sm">
                             <i className="fas fa-gas-pump w-4 mr-2"></i>
                             <span>{car.fuel_type}</span>
                           </div>
-                          <div className="flex items-center text-gray-400 text-sm">
-                            <i className="fas fa-map-marker-alt w-4 mr-2"></i>
-                            <span>{car.location}</span>
-                          </div>
+                          
+                          {/* Car/Motorcycle specific */}
+                          {(car.vehicle_type === 'car' || car.vehicle_type === 'motorcycle') && car.mileage !== undefined && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <i className="fas fa-tachometer-alt w-4 mr-2"></i>
+                              <span>{car.mileage?.toLocaleString()} км</span>
+                            </div>
+                          )}
+                          
+                          {car.transmission && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <i className="fas fa-cog w-4 mr-2"></i>
+                              <span>{car.transmission}</span>
+                            </div>
+                          )}
+                          
+                          {/* Boat/Plane specific - hours operated */}
+                          {(car.vehicle_type === 'boat' || car.vehicle_type === 'plane') && car.hours_operated !== undefined && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <i className="fas fa-clock w-4 mr-2"></i>
+                              <span>{car.hours_operated} моточасов</span>
+                            </div>
+                          )}
+                          
+                          {/* Boat specific */}
+                          {car.vehicle_type === 'boat' && car.boat_length && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <i className="fas fa-ruler w-4 mr-2"></i>
+                              <span>{car.boat_length} м</span>
+                            </div>
+                          )}
+                          
+                          {/* Plane specific */}
+                          {car.vehicle_type === 'plane' && car.plane_seats && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <i className="fas fa-users w-4 mr-2"></i>
+                              <span>{car.plane_seats} мест</span>
+                            </div>
+                          )}
+                          
+                          {/* Engine power for all types */}
+                          {car.engine_power && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <i className="fas fa-bolt w-4 mr-2"></i>
+                              <span>{car.engine_power} л.с.</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-2">
