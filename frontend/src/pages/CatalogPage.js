@@ -278,10 +278,18 @@ const CatalogPage = () => {
         <div className="max-w-7xl mx-auto container-padding">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white">
-              Каталог <span className="gold-gradient">автомобилей</span>
+              Каталог <span className="gold-gradient">
+                {filters.vehicleType === 'car' && 'автомобилей'}
+                {filters.vehicleType === 'motorcycle' && 'мотоциклов'}
+                {filters.vehicleType === 'boat' && 'лодок'}
+                {filters.vehicleType === 'plane' && 'самолетов'}
+              </span>
             </h1>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Более 1000 автомобилей от проверенных дилеров по всей России
+              {filters.vehicleType === 'car' && 'Более 1000 автомобилей от проверенных дилеров по всей России'}
+              {filters.vehicleType === 'motorcycle' && 'Широкий выбор мотоциклов от ведущих мировых брендов'}
+              {filters.vehicleType === 'boat' && 'Лучшие предложения по яхтам и катерам для морского отдыха'}
+              {filters.vehicleType === 'plane' && 'Частные самолеты для комфортных авиаперелетов'}
             </p>
           </div>
 
