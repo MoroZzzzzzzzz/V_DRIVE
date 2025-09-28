@@ -2589,6 +2589,71 @@ class VelesDriveAPITester:
                 test_results[test_name] = False
         
         return test_results
+
+    async def run_admin_dashboard_tests(self) -> Dict[str, bool]:
+        """Run Admin Dashboard tests as requested in review"""
+        logger.info("🏛️ Starting VELES DRIVE Admin Dashboard Testing")
+        logger.info(f"Testing API at: {self.base_url}")
+        logger.info("Testing Admin Dashboard endpoints as requested:")
+        logger.info("1. Admin Stats Endpoint - /api/admin/stats")
+        logger.info("2. Admin Users Endpoint - /api/admin/users")
+        logger.info("3. User Management Endpoints - block/unblock/approve")
+        logger.info("4. Admin Reports Endpoint - /api/admin/reports")
+        logger.info("5. Report Export Endpoint - /api/admin/reports/{type}/export")
+        
+        test_results = {}
+        
+        # First ensure basic connectivity
+        connectivity_ok = await self.test_basic_connectivity()
+        if not connectivity_ok:
+            logger.error("❌ Basic connectivity failed. Cannot proceed with admin testing.")
+            return {"Basic Connectivity": False}
+        
+        test_results["Basic Connectivity"] = True
+        
+        # Create specific test users mentioned in review request
+        logger.info("\n🔧 Creating specific test users for admin testing...")
+        users_created = await self.create_specific_admin_test_users()
+        test_results["Specific Test Users Creation"] = users_created
+        
+        if not users_created:
+            logger.error("❌ Failed to create specific test users. Cannot proceed with admin testing.")
+            return test_results
+        
+        # Create some basic test data needed for admin functions
+        if "specific_dealer" in self.auth_tokens:
+            # Create dealer profile
+            dealer_created = await self.test_dealer_system()
+            test_results["Dealer Setup"] = dealer_created
+            
+            # Create some cars for admin to manage
+            cars_created = await self.test_cars_system()
+            test_results["Cars Setup"] = cars_created
+        
+        # Run admin-specific tests
+        admin_tests = [
+            ("Admin Dashboard Extended", self.test_admin_dashboard_extended)
+        ]
+        
+        for test_name, test_func in admin_tests:
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Running: {test_name}")
+            logger.info(f"{'='*60}")
+            
+            try:
+                result = await test_func()
+                test_results[test_name] = result
+                
+                if result:
+                    logger.info(f"✅ {test_name}: PASSED")
+                else:
+                    logger.error(f"❌ {test_name}: FAILED")
+                    
+            except Exception as e:
+                logger.error(f"❌ {test_name}: ERROR - {str(e)}")
+                test_results[test_name] = False
+        
+        return test_results
     
     def print_summary(self, results: Dict[str, bool]):
         """Print test results summary"""
