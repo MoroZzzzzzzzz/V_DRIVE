@@ -113,7 +113,8 @@ class VelesDriveAPITester:
     
     def get_auth_headers(self, user_type: str = "dealer") -> Dict:
         """Get authorization headers for requests"""
-        token = self.auth_tokens.get(user_type)
+        # Try specific user type first, then fallback to regular user type
+        token = self.auth_tokens.get(f"specific_{user_type}") or self.auth_tokens.get(user_type)
         if token:
             return {"Authorization": f"Bearer {token}"}
         return {}
