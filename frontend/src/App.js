@@ -17,6 +17,7 @@ import SubscriptionPage from './pages/SubscriptionPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AuctionPage from './pages/AuctionPage';
 import ComparisonPage from './pages/ComparisonPage';
+import SecuritySettingsPage from './pages/SecuritySettingsPage';
 import AIAssistant from './components/AIAssistant';
 import PWAInstall from './components/PWAInstall';
 
