@@ -1495,6 +1495,562 @@ class VelesDriveAPITester:
         
         return success
 
+    async def test_2fa_system_comprehensive(self) -> bool:
+        """Comprehensive test of 2FA (Two-Factor Authentication) system"""
+        logger.info("🔐 Testing 2FA System Comprehensively...")
+        
+        # Create specific test users for 2FA testing
+        await self.create_specific_test_users()
+        
+        success = True
+        test_results = {}
+        
+        # Test each 2FA function
+        tfa_tests = [
+            ("2FA Setup", self.test_2fa_setup),
+            ("2FA Verification", self.test_2fa_verification),
+            ("2FA Login", self.test_2fa_login),
+            ("2FA Disable", self.test_2fa_disable),
+            ("Backup Codes Regeneration", self.test_backup_codes_regeneration),
+            ("Audit Log", self.test_audit_log),
+        ]
+        
+        for test_name, test_func in tfa_tests:
+            logger.info(f"\n--- Running {test_name} ---")
+            try:
+                result = await test_func()
+                test_results[test_name] = result
+                if result:
+                    logger.info(f"✅ {test_name}: PASSED")
+                else:
+                    logger.error(f"❌ {test_name}: FAILED")
+                    success = False
+            except Exception as e:
+                logger.error(f"❌ {test_name}: ERROR - {str(e)}")
+                test_results[test_name] = False
+                success = False
+        
+        # Summary
+        logger.info(f"\n{'='*60}")
+        logger.info("2FA SYSTEM TEST RESULTS SUMMARY")
+        logger.info(f"{'='*60}")
+        
+        passed = sum(1 for result in test_results.values() if result)
+        total = len(test_results)
+        
+        for test_name, result in test_results.items():
+            status = "✅ PASSED" if result else "❌ FAILED"
+            logger.info(f"{test_name}: {status}")
+        
+        logger.info(f"\nOverall: {passed}/{total} tests passed")
+        logger.info(f"Success rate: {(passed/total)*100:.1f}%")
+        
+        return success
+
+    async def test_2fa_setup(self) -> bool:
+        """Test 2FA setup endpoint"""
+        logger.info("🔧 Testing 2FA Setup...")
+        
+        if "buyer" not in self.auth_tokens:
+            logger.error("❌ No buyer token available for 2FA setup testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        
+        # Test 2FA setup
+        result = await self.make_request("GET", "/security/2fa/setup", headers=headers)
+        
+        if result["status"] == 200:
+            setup_data = result["data"]
+            logger.info("✅ 2FA setup successful")
+            
+            # Verify required fields
+            required_fields = ["secret", "qr_code", "manual_entry_key", "instructions"]
+            for field in required_fields:
+                if field in setup_data:
+                    logger.info(f"✅ Found required field: {field}")
+                    if field == "secret":
+                        self.test_data["2fa_secret"] = setup_data[field]
+                    elif field == "qr_code":
+                        if setup_data[field].startswith("data:image/png;base64,"):
+                            logger.info("✅ QR code is properly formatted")
+                        else:
+                            logger.error("❌ QR code format is invalid")
+                            success = False
+                else:
+                    logger.error(f"❌ Missing required field: {field}")
+                    success = False
+        else:
+            logger.error(f"❌ 2FA setup failed: {result}")
+            success = False
+        
+        # Test setup when already initiated (should work - can regenerate)
+        result2 = await self.make_request("GET", "/security/2fa/setup", headers=headers)
+        if result2["status"] == 200:
+            logger.info("✅ 2FA setup can be called multiple times (regenerates secret)")
+        else:
+            logger.error(f"❌ 2FA setup should allow regeneration: {result2}")
+            success = False
+        
+        return success
+
+    async def test_2fa_verification(self) -> bool:
+        """Test 2FA verification and enabling"""
+        logger.info("✅ Testing 2FA Verification...")
+        
+        if "buyer" not in self.auth_tokens or "2fa_secret" not in self.test_data:
+            logger.error("❌ Missing buyer token or 2FA secret for verification testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        
+        # Generate a valid TOTP token for testing
+        import pyotp
+        secret = self.test_data["2fa_secret"]
+        totp = pyotp.TOTP(secret)
+        valid_token = totp.now()
+        
+        logger.info(f"Generated TOTP token: {valid_token}")
+        
+        # Test verification with valid token
+        form_data = aiohttp.FormData()
+        form_data.add_field("token", valid_token)
+        
+        result = await self.make_request("POST", "/security/2fa/verify-setup", files=form_data, headers=headers)
+        
+        if result["status"] == 200:
+            verify_data = result["data"]
+            logger.info("✅ 2FA verification successful")
+            
+            # Check for backup codes
+            if "backup_codes" in verify_data:
+                backup_codes = verify_data["backup_codes"]
+                logger.info(f"✅ Received {len(backup_codes)} backup codes")
+                self.test_data["backup_codes"] = backup_codes
+                
+                # Verify backup code format (should be XXXX-XXXX)
+                for code in backup_codes:
+                    if len(code) == 9 and code[4] == '-':
+                        logger.info(f"✅ Backup code format correct: {code}")
+                    else:
+                        logger.error(f"❌ Invalid backup code format: {code}")
+                        success = False
+                        break
+            else:
+                logger.error("❌ Missing backup codes in verification response")
+                success = False
+                
+            if "message" in verify_data:
+                logger.info(f"✅ Success message: {verify_data['message']}")
+            
+        else:
+            logger.error(f"❌ 2FA verification failed: {result}")
+            success = False
+        
+        # Test verification with invalid token
+        form_data = aiohttp.FormData()
+        form_data.add_field("token", "000000")
+        
+        result = await self.make_request("POST", "/security/2fa/verify-setup", files=form_data, headers=headers)
+        
+        if result["status"] == 400:
+            logger.info("✅ Invalid token properly rejected")
+        else:
+            logger.error(f"❌ Invalid token should be rejected: {result}")
+            success = False
+        
+        # Test verification when already enabled (should fail)
+        if success:  # Only test if 2FA was successfully enabled
+            form_data = aiohttp.FormData()
+            form_data.add_field("token", totp.now())
+            
+            result = await self.make_request("POST", "/security/2fa/verify-setup", files=form_data, headers=headers)
+            
+            if result["status"] == 400 and "already enabled" in result["data"].get("detail", ""):
+                logger.info("✅ Properly prevents re-enabling 2FA")
+            else:
+                logger.error(f"❌ Should prevent re-enabling 2FA: {result}")
+                success = False
+        
+        return success
+
+    async def test_2fa_login(self) -> bool:
+        """Test login with 2FA enabled"""
+        logger.info("🔑 Testing 2FA Login...")
+        
+        if "buyer" not in self.test_users:
+            logger.error("❌ No buyer user data for 2FA login testing")
+            return False
+        
+        success = True
+        buyer_user = self.test_users["buyer"]
+        
+        # Test login without 2FA token (should require 2FA)
+        login_data = {
+            "email": buyer_user["email"],
+            "password": buyer_user["password"]
+        }
+        
+        result = await self.make_request("POST", "/auth/login", login_data)
+        
+        if result["status"] == 200 and result["data"].get("requires_2fa"):
+            logger.info("✅ Login properly requires 2FA")
+            logger.info(f"Message: {result['data'].get('message', '')}")
+        else:
+            logger.error(f"❌ Login should require 2FA: {result}")
+            success = False
+        
+        # Test login with valid 2FA token
+        if "2fa_secret" in self.test_data:
+            import pyotp
+            secret = self.test_data["2fa_secret"]
+            totp = pyotp.TOTP(secret)
+            valid_token = totp.now()
+            
+            login_data_2fa = {
+                "email": buyer_user["email"],
+                "password": buyer_user["password"],
+                "two_fa_token": valid_token
+            }
+            
+            result = await self.make_request("POST", "/auth/login", login_data_2fa)
+            
+            if result["status"] == 200 and "access_token" in result["data"]:
+                logger.info("✅ 2FA login successful")
+                # Update token for future tests
+                self.auth_tokens["buyer"] = result["data"]["access_token"]
+            else:
+                logger.error(f"❌ 2FA login failed: {result}")
+                success = False
+        
+        # Test login with backup code
+        if "backup_codes" in self.test_data and self.test_data["backup_codes"]:
+            backup_code = self.test_data["backup_codes"][0]
+            
+            login_data_backup = {
+                "email": buyer_user["email"],
+                "password": buyer_user["password"],
+                "backup_code": backup_code
+            }
+            
+            result = await self.make_request("POST", "/auth/login", login_data_backup)
+            
+            if result["status"] == 200 and "access_token" in result["data"]:
+                logger.info("✅ Backup code login successful")
+                # Remove used backup code from our test data
+                self.test_data["backup_codes"].remove(backup_code)
+            else:
+                logger.error(f"❌ Backup code login failed: {result}")
+                success = False
+        
+        # Test login with invalid 2FA token
+        login_data_invalid = {
+            "email": buyer_user["email"],
+            "password": buyer_user["password"],
+            "two_fa_token": "000000"
+        }
+        
+        result = await self.make_request("POST", "/auth/login", login_data_invalid)
+        
+        if result["status"] == 400:
+            logger.info("✅ Invalid 2FA token properly rejected during login")
+        else:
+            logger.error(f"❌ Invalid 2FA token should be rejected: {result}")
+            success = False
+        
+        return success
+
+    async def test_2fa_disable(self) -> bool:
+        """Test 2FA disable functionality"""
+        logger.info("🔓 Testing 2FA Disable...")
+        
+        if "buyer" not in self.auth_tokens or "buyer" not in self.test_users:
+            logger.error("❌ Missing buyer token or user data for 2FA disable testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        buyer_user = self.test_users["buyer"]
+        
+        # Test disable with valid password and 2FA token
+        if "2fa_secret" in self.test_data:
+            import pyotp
+            secret = self.test_data["2fa_secret"]
+            totp = pyotp.TOTP(secret)
+            valid_token = totp.now()
+            
+            form_data = aiohttp.FormData()
+            form_data.add_field("password", buyer_user["password"])
+            form_data.add_field("token_or_backup", valid_token)
+            
+            result = await self.make_request("POST", "/security/2fa/disable", files=form_data, headers=headers)
+            
+            if result["status"] == 200:
+                logger.info("✅ 2FA disable with token successful")
+                logger.info(f"Message: {result['data'].get('message', '')}")
+                
+                # Verify 2FA is actually disabled by trying to set it up again
+                setup_result = await self.make_request("GET", "/security/2fa/setup", headers=headers)
+                if setup_result["status"] == 200:
+                    logger.info("✅ 2FA properly disabled - can setup again")
+                    # Store new secret for potential future tests
+                    self.test_data["2fa_secret"] = setup_result["data"]["secret"]
+                else:
+                    logger.error("❌ 2FA not properly disabled")
+                    success = False
+            else:
+                logger.error(f"❌ 2FA disable failed: {result}")
+                success = False
+        
+        # Test disable with invalid password
+        form_data = aiohttp.FormData()
+        form_data.add_field("password", "wrongpassword")
+        form_data.add_field("token_or_backup", "123456")
+        
+        result = await self.make_request("POST", "/security/2fa/disable", files=form_data, headers=headers)
+        
+        if result["status"] == 400:
+            logger.info("✅ Invalid password properly rejected for 2FA disable")
+        else:
+            logger.error(f"❌ Invalid password should be rejected: {result}")
+            success = False
+        
+        return success
+
+    async def test_backup_codes_regeneration(self) -> bool:
+        """Test backup codes regeneration"""
+        logger.info("🔄 Testing Backup Codes Regeneration...")
+        
+        if "buyer" not in self.auth_tokens or "buyer" not in self.test_users:
+            logger.error("❌ Missing buyer token or user data for backup codes testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        buyer_user = self.test_users["buyer"]
+        
+        # First, enable 2FA again if it was disabled
+        if "2fa_secret" in self.test_data:
+            import pyotp
+            secret = self.test_data["2fa_secret"]
+            totp = pyotp.TOTP(secret)
+            valid_token = totp.now()
+            
+            # Enable 2FA
+            form_data = aiohttp.FormData()
+            form_data.add_field("token", valid_token)
+            
+            enable_result = await self.make_request("POST", "/security/2fa/verify-setup", files=form_data, headers=headers)
+            
+            if enable_result["status"] == 200:
+                logger.info("✅ 2FA re-enabled for backup codes testing")
+                self.test_data["backup_codes"] = enable_result["data"]["backup_codes"]
+            elif enable_result["status"] == 400 and "already enabled" in enable_result["data"].get("detail", ""):
+                logger.info("✅ 2FA already enabled")
+            else:
+                logger.error(f"❌ Failed to enable 2FA for backup codes test: {enable_result}")
+                return False
+        
+        # Test regenerating backup codes with valid password
+        form_data = aiohttp.FormData()
+        form_data.add_field("password", buyer_user["password"])
+        
+        result = await self.make_request("POST", "/security/2fa/regenerate-backup-codes", files=form_data, headers=headers)
+        
+        if result["status"] == 200:
+            regen_data = result["data"]
+            logger.info("✅ Backup codes regeneration successful")
+            
+            if "backup_codes" in regen_data:
+                new_codes = regen_data["backup_codes"]
+                logger.info(f"✅ Received {len(new_codes)} new backup codes")
+                
+                # Verify codes are different from old ones (if we had old ones)
+                if "backup_codes" in self.test_data:
+                    old_codes = self.test_data["backup_codes"]
+                    if set(new_codes) != set(old_codes):
+                        logger.info("✅ New backup codes are different from old ones")
+                    else:
+                        logger.error("❌ New backup codes should be different")
+                        success = False
+                
+                self.test_data["backup_codes"] = new_codes
+            else:
+                logger.error("❌ Missing backup codes in regeneration response")
+                success = False
+                
+            if "message" in regen_data:
+                logger.info(f"✅ Success message: {regen_data['message']}")
+        else:
+            logger.error(f"❌ Backup codes regeneration failed: {result}")
+            success = False
+        
+        # Test regeneration with invalid password
+        form_data = aiohttp.FormData()
+        form_data.add_field("password", "wrongpassword")
+        
+        result = await self.make_request("POST", "/security/2fa/regenerate-backup-codes", files=form_data, headers=headers)
+        
+        if result["status"] == 400:
+            logger.info("✅ Invalid password properly rejected for backup codes regeneration")
+        else:
+            logger.error(f"❌ Invalid password should be rejected: {result}")
+            success = False
+        
+        # Test regeneration when 2FA is not enabled (disable first)
+        if "2fa_secret" in self.test_data:
+            import pyotp
+            secret = self.test_data["2fa_secret"]
+            totp = pyotp.TOTP(secret)
+            valid_token = totp.now()
+            
+            # Disable 2FA
+            disable_form = aiohttp.FormData()
+            disable_form.add_field("password", buyer_user["password"])
+            disable_form.add_field("token_or_backup", valid_token)
+            
+            await self.make_request("POST", "/security/2fa/disable", files=disable_form, headers=headers)
+            
+            # Try to regenerate codes when 2FA is disabled
+            form_data = aiohttp.FormData()
+            form_data.add_field("password", buyer_user["password"])
+            
+            result = await self.make_request("POST", "/security/2fa/regenerate-backup-codes", files=form_data, headers=headers)
+            
+            if result["status"] == 400 and "not enabled" in result["data"].get("detail", ""):
+                logger.info("✅ Properly prevents backup codes regeneration when 2FA disabled")
+            else:
+                logger.error(f"❌ Should prevent regeneration when 2FA disabled: {result}")
+                success = False
+        
+        return success
+
+    async def test_audit_log(self) -> bool:
+        """Test audit log functionality"""
+        logger.info("📋 Testing Audit Log...")
+        
+        if "buyer" not in self.auth_tokens:
+            logger.error("❌ No buyer token available for audit log testing")
+            return False
+        
+        success = True
+        headers = self.get_auth_headers("buyer")
+        
+        # Test getting audit log
+        result = await self.make_request("GET", "/security/audit-log", headers=headers)
+        
+        if result["status"] == 200:
+            audit_data = result["data"]
+            logger.info("✅ Audit log retrieval successful")
+            
+            # Check required fields
+            required_fields = ["user_id", "period_days", "total_activities", "activities"]
+            for field in required_fields:
+                if field in audit_data:
+                    logger.info(f"✅ Found audit field: {field}")
+                    if field == "total_activities":
+                        logger.info(f"   Total activities: {audit_data[field]}")
+                    elif field == "activities":
+                        activities = audit_data[field]
+                        logger.info(f"   Activities returned: {len(activities)}")
+                        
+                        # Check activity structure if we have activities
+                        if activities:
+                            first_activity = activities[0]
+                            activity_fields = ["id", "timestamp", "user_id", "action"]
+                            for act_field in activity_fields:
+                                if act_field in first_activity:
+                                    logger.info(f"   ✅ Activity has field: {act_field}")
+                                else:
+                                    logger.warning(f"   ⚠️  Activity missing field: {act_field}")
+                else:
+                    logger.error(f"❌ Missing audit field: {field}")
+                    success = False
+        else:
+            logger.error(f"❌ Audit log retrieval failed: {result}")
+            success = False
+        
+        # Test audit log with custom days parameter
+        result = await self.make_request("GET", "/security/audit-log", {"days": 7}, headers)
+        
+        if result["status"] == 200:
+            logger.info("✅ Audit log with custom days parameter works")
+            logger.info(f"   Period: {result['data']['period_days']} days")
+        else:
+            logger.error(f"❌ Audit log with custom days failed: {result}")
+            success = False
+        
+        # Test audit log with invalid days parameter (too high)
+        result = await self.make_request("GET", "/security/audit-log", {"days": 100}, headers)
+        
+        if result["status"] == 422:  # Validation error
+            logger.info("✅ Properly validates days parameter (max 90)")
+        else:
+            logger.warning(f"⚠️  Days parameter validation: {result}")
+            # Don't mark as failure since this is validation behavior
+        
+        return success
+
+    async def create_specific_test_users(self) -> bool:
+        """Create the specific test users mentioned in the review request"""
+        logger.info("👥 Creating specific test users for 2FA testing...")
+        
+        test_users_data = [
+            {
+                "email": "buyer@test.com",
+                "password": "testpass123",
+                "full_name": "Test Buyer",
+                "phone": "+7-900-123-4567",
+                "role": "buyer"
+            },
+            {
+                "email": "dealer@test.com",
+                "password": "testpass123",
+                "full_name": "Test Dealer",
+                "phone": "+7-900-765-4321",
+                "role": "dealer",
+                "company_name": "Test Auto Dealer"
+            },
+            {
+                "email": "admin@test.com",
+                "password": "testpass123",
+                "full_name": "Test Admin",
+                "phone": "+7-900-555-0000",
+                "role": "admin"
+            }
+        ]
+        
+        success = True
+        
+        for user_data in test_users_data:
+            # Try to login first to see if user exists
+            login_data = {
+                "email": user_data["email"],
+                "password": user_data["password"]
+            }
+            
+            login_result = await self.make_request("POST", "/auth/login", login_data)
+            
+            if login_result["status"] == 200:
+                logger.info(f"✅ User {user_data['email']} already exists and can login")
+                self.test_users[user_data['role']] = user_data
+                self.auth_tokens[user_data['role']] = login_result["data"]["access_token"]
+            else:
+                # User doesn't exist, create it
+                register_result = await self.make_request("POST", "/auth/register", user_data)
+                
+                if register_result["status"] == 200:
+                    logger.info(f"✅ Created user {user_data['email']}")
+                    self.test_users[user_data['role']] = user_data
+                    self.auth_tokens[user_data['role']] = register_result["data"]["access_token"]
+                else:
+                    logger.error(f"❌ Failed to create user {user_data['email']}: {register_result}")
+                    success = False
+        
+        return success
+
     async def test_ai_system_comprehensive(self) -> bool:
         """Comprehensive test of all AI functions with specific test users"""
         logger.info("🧠 Testing AI System Comprehensively with Test Users...")
