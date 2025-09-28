@@ -11,9 +11,17 @@ import axios from 'axios';
 
 const TelegramBot = () => {
   const { user, isAuthenticated } = useAuth();
-  const [botConnected, setBotConnected] = useState(false);
-  const [botUsername, setBotUsername] = useState('@VelesDriveBot');
+  const [telegramStatus, setTelegramStatus] = useState({
+    connected: false,
+    username: null,
+    connected_at: null,
+    notifications_enabled: true
+  });
   const [connectionCode, setConnectionCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  
+  const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
     if (isAuthenticated) {
