@@ -2399,6 +2399,10 @@ async def export_report(
         logger.error(f"Export report error: {e}")
         raise HTTPException(status_code=500, detail="Failed to export report")
 
+# Include routers after all routes are defined
+app.include_router(api_router)
+app.include_router(payments_router)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
