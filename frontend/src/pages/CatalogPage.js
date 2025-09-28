@@ -421,7 +421,12 @@ const CatalogPage = () => {
             <>
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-bold text-white">
-                  Найдено автомобилей: <span className="text-gold">{cars.length}</span>
+                  Найдено {
+                    filters.vehicleType === 'car' ? 'автомобилей' :
+                    filters.vehicleType === 'motorcycle' ? 'мотоциклов' :
+                    filters.vehicleType === 'boat' ? 'лодок' :
+                    'самолетов'
+                  }: <span className="text-gold">{cars.length}</span>
                 </h2>
                 <div className="flex gap-4">
                   <Button variant="ghost" className="text-gray-400 hover:text-white">
