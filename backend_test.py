@@ -1320,7 +1320,7 @@ class VelesDriveAPITester:
         # Test 6: Access Control - Non-admin users should be blocked
         logger.info("Testing Access Control...")
         
-        if "buyer" in self.auth_tokens:
+        if "buyer" in self.auth_tokens or "specific_buyer" in self.auth_tokens:
             buyer_headers = self.get_auth_headers("buyer")
             
             # Test that buyer cannot access admin endpoints
