@@ -128,30 +128,17 @@ class AdditionalServicesAPITester:
         success = True
         
         for user_data in test_users_data:
-            # Try to login first (user might already exist)
-            login_data = {
-                "email": user_data["email"],
-                "password": user_data["password"]
-            }
-            
-            result = await self.make_request("POST", "/auth/login", login_data)
+            # Register new users (they shouldn't exist with unique IDs)
+            logger.info(f"Registering new user: {user_data['role']} ({user_data['email']})")
+            result = await self.make_request("POST", "/auth/register", user_data)
             
             if result["status"] == 200:
-                logger.info(f"✅ Logged in existing user: {user_data['role']} ({user_data['email']})")
+                logger.info(f"✅ Registered new user: {user_data['role']} ({user_data['email']})")
                 self.test_users[user_data['role']] = user_data
                 self.auth_tokens[user_data['role']] = result["data"]["access_token"]
             else:
-                # User doesn't exist, try to register
-                logger.info(f"User {user_data['email']} doesn't exist, attempting registration...")
-                result = await self.make_request("POST", "/auth/register", user_data)
-                
-                if result["status"] == 200:
-                    logger.info(f"✅ Registered new user: {user_data['role']} ({user_data['email']})")
-                    self.test_users[user_data['role']] = user_data
-                    self.auth_tokens[user_data['role']] = result["data"]["access_token"]
-                else:
-                    logger.error(f"❌ Failed to register user {user_data['role']}: {result}")
-                    success = False
+                logger.error(f"❌ Failed to register user {user_data['role']}: {result}")
+                success = False
         
         return success
     
