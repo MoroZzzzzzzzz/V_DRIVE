@@ -1516,14 +1516,54 @@ class VelesDriveAPITester:
         buyer_login = await self.make_request("POST", "/auth/login", buyer_credentials)
         
         if buyer_login["status"] == 200:
-            buyer_headers = {"Authorization": f"Bearer {buyer_login['data']['access_token']}"}
-            buyer_erp_result = await self.make_request("GET", "/erp/dashboard", headers=buyer_headers)
-            
-            if buyer_erp_result["status"] == 403:
-                logger.info("✅ Обычные покупатели не могут получить доступ к ERP функциям")
+            # Handle both possible response structures
+            if "access_token" in buyer_login["data"]:
+                buyer_token = buyer_login["data"]["access_token"]
+            elif "token" in buyer_login["data"]:
+                buyer_token = buyer_login["data"]["token"]
             else:
-                logger.error(f"❌ Покупатели не должны иметь доступ к ERP: {buyer_erp_result}")
+                logger.error(f"❌ No access token found in buyer login response: {buyer_login['data']}")
                 success = False
+                buyer_token = None
+            
+            if buyer_token:
+                buyer_headers = {"Authorization": f"Bearer {buyer_token}"}
+                buyer_erp_result = await self.make_request("GET", "/erp/dashboard", headers=buyer_headers)
+                
+                if buyer_erp_result["status"] == 403:
+                    logger.info("✅ Обычные покупатели не могут получить доступ к ERP функциям")
+                else:
+                    logger.error(f"❌ Покупатели не должны иметь доступ к ERP: {buyer_erp_result}")
+                    success = False
+        elif buyer_login["status"] == 400:
+            # User doesn't exist, create one for testing
+            logger.info("ℹ️  Создание тестового покупателя для проверки доступа...")
+            buyer_register_data = {
+                "email": "buyer@test.com",
+                "password": "testpass123",
+                "full_name": "Test Buyer",
+                "phone": "+7-900-000-0001",
+                "role": "buyer"
+            }
+            
+            register_result = await self.make_request("POST", "/auth/register", buyer_register_data)
+            
+            if register_result["status"] == 200:
+                buyer_token = register_result["data"]["access_token"]
+                buyer_headers = {"Authorization": f"Bearer {buyer_token}"}
+                buyer_erp_result = await self.make_request("GET", "/erp/dashboard", headers=buyer_headers)
+                
+                if buyer_erp_result["status"] == 403:
+                    logger.info("✅ Обычные покупатели не могут получить доступ к ERP функциям")
+                else:
+                    logger.error(f"❌ Покупатели не должны иметь доступ к ERP: {buyer_erp_result}")
+                    success = False
+            else:
+                logger.error(f"❌ Не удалось создать тестового покупателя: {register_result}")
+                success = False
+        else:
+            logger.error(f"❌ Ошибка входа покупателя: {buyer_login}")
+            success = False
         
         # Step 4: Test additional ERP endpoints if available
         logger.info("🔧 Тестирование дополнительных ERP endpoints...")
