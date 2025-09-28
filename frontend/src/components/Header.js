@@ -90,7 +90,7 @@ const Header = () => {
               )
             ))}
             
-            {user && userNavigationItems.map((item) => (
+            {!loading && isAuthenticated && userNavigationItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
