@@ -584,7 +584,7 @@ const CatalogPage = () => {
 
                         <div className="space-y-2">
                           <div className="flex gap-2">
-                            <Link to={`/car/${car.id}`} className="flex-1">
+                            <Link to={`/${car.vehicle_type || 'car'}/${car.id}`} className="flex-1">
                               <Button 
                                 className="w-full btn-outline-gold text-sm"
                                 onClick={() => recordCarView(car.id)}
