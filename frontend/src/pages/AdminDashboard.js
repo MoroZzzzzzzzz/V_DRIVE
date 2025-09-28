@@ -917,7 +917,7 @@ const AdminDashboard = () => {
                     <Button 
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleReject(item.id, item.type)}
+                      onClick={() => handleRejectPending(item.id, item.type)}
                     >
                       <XCircle size={16} className="mr-1" />
                       Отклонить
