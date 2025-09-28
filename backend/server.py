@@ -1907,8 +1907,8 @@ async def verify_2fa_setup(
         raise HTTPException(status_code=400, detail="2FA setup not initiated")
     
     try:
-        # Verify token
-        if not two_factor_auth.verify_token(current_user.two_fa_secret, token):
+        # Verify token with expanded window for better synchronization tolerance
+        if not two_factor_auth.verify_token(current_user.two_fa_secret, token, window=2):
             raise HTTPException(status_code=400, detail="Invalid verification code")
         
         # Generate backup codes
