@@ -347,59 +347,66 @@ const AdminDashboard = () => {
     <div className="space-y-8">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="glass-card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Всего пользователей</p>
-              <p className="text-3xl font-bold text-white">{formatNumber(stats.total_users)}</p>
-              <p className="text-green-400 text-sm">
-                <i className="fas fa-arrow-up mr-1"></i>
-                +{stats.new_registrations} за месяц
-              </p>
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Всего пользователей</p>
+                <p className="text-3xl font-bold text-white">{formatNumber(stats.total_users)}</p>
+                <p className="text-green-400 text-sm flex items-center">
+                  <TrendingUp size={14} className="mr-1" />
+                  +{stats.new_registrations} за месяц
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Users className="text-white" size={24} />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <i className="fas fa-users text-white"></i>
-            </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="glass-card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Активные дилеры</p>
-              <p className="text-3xl font-bold text-white">{formatNumber(stats.total_dealers)}</p>
-              <p className="text-gold text-sm">
-                <i className="fas fa-store mr-1"></i>
-                Верифицированных
-              </p>
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Активные дилеры</p>
+                <p className="text-3xl font-bold text-white">{formatNumber(stats.total_dealers)}</p>
+                <p className="text-yellow-400 text-sm flex items-center">
+                  <Store size={14} className="mr-1" />
+                  Верифицированных
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
+                <Store className="text-black" size={24} />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-gold rounded-lg flex items-center justify-center">
-              <i className="fas fa-store text-black"></i>
-            </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="glass-card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Автомобили</p>
-              <p className="text-3xl font-bold text-white">{formatNumber(stats.total_cars)}</p>
-              <p className="text-blue-400 text-sm">
-                <i className="fas fa-car mr-1"></i>
-                В каталоге
-              </p>
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Автомобили</p>
+                <p className="text-3xl font-bold text-white">{formatNumber(stats.total_cars)}</p>
+                <p className="text-blue-400 text-sm flex items-center">
+                  <Car size={14} className="mr-1" />
+                  В каталоге
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                <Car className="text-white" size={24} />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-              <i className="fas fa-car text-white"></i>
-            </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="glass-card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Месячный доход</p>
-              <p className="text-3xl font-bold text-white">{formatPrice(stats.monthly_revenue)}</p>
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Месячный доход</p>
+                <p className="text-3xl font-bold text-white">{formatPrice(stats.monthly_revenue)}</p>
               <p className="text-green-400 text-sm">
                 <i className="fas fa-arrow-up mr-1"></i>
                 +12% к прошлому месяцу
