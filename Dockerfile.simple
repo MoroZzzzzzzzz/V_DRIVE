@@ -1,0 +1,90 @@
+# Multi-stage Dockerfile для VELES DRIVE
+# Упрощенная версия для легкого деплоя
+
+# ================================
+# Backend Stage
+# ================================
+FROM python:3.11-slim as backend
+
+# Установка системных зависимостей
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Копирование и установка Python зависимостей
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копирование backend кода
+COPY backend/ .
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8001/api/ || exit 1
+
+EXPOSE 8001
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+
+# ================================
+# Frontend Build Stage
+# ================================
+FROM node:18-alpine as frontend-builder
+
+WORKDIR /app
+
+# Копирование package файлов
+COPY frontend/package*.json ./
+COPY frontend/yarn.lock* ./
+
+# Установка зависимостей
+RUN npm install --frozen-lockfile || yarn install --frozen-lockfile
+
+# Копирование исходного кода
+COPY frontend/ .
+
+# Build аргументы
+ARG REACT_APP_BACKEND_URL
+ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+
+# Сборка приложения
+RUN npm run build || yarn build
+
+# ================================
+# Frontend Production Stage  
+# ================================
+FROM nginx:alpine as frontend
+
+# Копирование кастомной конфигурации nginx
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 3000;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Handle client-side routing
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+EOF
+
+# Копирование собранного приложения
+COPY --from=frontend-builder /app/build /usr/share/nginx/html
+
+EXPOSE 3000
+CMD ["nginx", "-g", "daemon off;"]
