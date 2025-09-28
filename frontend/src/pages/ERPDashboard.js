@@ -8,6 +8,8 @@ import axios from 'axios';
 import CarsManagement from '../components/erp/CarsManagement';
 import SalesManagement from '../components/erp/SalesManagement';
 import ProjectsManagement from '../components/erp/ProjectsManagement';
+import ClientsManagement from '../components/erp/ClientsManagement';
+import AdvancedReports from '../components/erp/AdvancedReports';
 import CRMPanel from '../components/CRMPanel';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
