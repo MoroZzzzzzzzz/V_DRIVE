@@ -2180,6 +2180,188 @@ async def get_vehicles_stats():
 app.include_router(api_router)
 app.include_router(payments_router)
 
+# Additional Services Endpoints
+@api_router.post("/services/insurance/quote")
+async def get_insurance_quote(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Get insurance quote"""
+    try:
+        car_id = request.get("car_id")
+        insurance_type = request.get("insurance_type", "OSAGO")
+        coverage_amount = request.get("coverage_amount", 300000)
+        driver_age = request.get("driver_age", 30)
+        driving_experience = request.get("driving_experience", 5)
+        region = request.get("region", "moscow")
+        
+        # Basic insurance calculation logic
+        base_rates = {
+            "OSAGO": 4000,
+            "KASKO": 15000,
+            "FULL": 25000
+        }
+        
+        base_rate = base_rates.get(insurance_type, 4000)
+        
+        # Age factor
+        age_factor = 1.0
+        if driver_age < 25:
+            age_factor = 1.3
+        elif driver_age > 50:
+            age_factor = 0.9
+        
+        # Experience factor
+        exp_factor = max(0.7, 1.0 - (driving_experience * 0.05))
+        
+        # Region factor
+        region_factors = {
+            "moscow": 1.2,
+            "spb": 1.1,
+            "regions": 0.8
+        }
+        region_factor = region_factors.get(region, 1.0)
+        
+        # Calculate final premium
+        yearly_premium = int(base_rate * age_factor * exp_factor * region_factor)
+        monthly_premium = int(yearly_premium / 12)
+        
+        quote = {
+            "insurance_type": insurance_type,
+            "coverage_amount": coverage_amount,
+            "yearly_premium": yearly_premium,
+            "monthly_premium": monthly_premium,
+            "driver_age": driver_age,
+            "driving_experience": driving_experience,
+            "region": region,
+            "valid_until": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "quote_id": str(uuid.uuid4())
+        }
+        
+        return quote
+        
+    except Exception as e:
+        logger.error(f"Insurance quote error: {e}")
+        raise HTTPException(status_code=400, detail="Failed to calculate insurance quote")
+
+@api_router.post("/services/loan/apply")
+async def apply_for_loan(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Apply for auto loan"""
+    try:
+        car_id = request.get("car_id")
+        loan_amount = request.get("loan_amount")
+        monthly_income = request.get("monthly_income")
+        employment_status = request.get("employment_status", "employed")
+        loan_term_months = request.get("loan_term_months", 60)
+        down_payment = request.get("down_payment", 0)
+        
+        # Basic loan approval logic
+        income_to_loan_ratio = loan_amount / (monthly_income * 12) if monthly_income else 0
+        
+        # Determine interest rate based on profile
+        base_rate = 12.0
+        if income_to_loan_ratio < 3:
+            base_rate = 9.5
+        elif income_to_loan_ratio < 5:
+            base_rate = 11.0
+        
+        if employment_status == "self-employed":
+            base_rate += 1.5
+        elif employment_status == "business-owner":
+            base_rate += 0.5
+        
+        # Calculate monthly payment
+        monthly_rate = base_rate / 100 / 12
+        total_amount = loan_amount - down_payment
+        
+        if monthly_rate > 0:
+            monthly_payment = int(
+                total_amount * (monthly_rate * (1 + monthly_rate) ** loan_term_months) /
+                ((1 + monthly_rate) ** loan_term_months - 1)
+            )
+        else:
+            monthly_payment = int(total_amount / loan_term_months)
+        
+        # Approval decision
+        is_approved = (
+            monthly_income and
+            monthly_payment < monthly_income * 0.4 and  # 40% debt-to-income ratio
+            income_to_loan_ratio < 6
+        )
+        
+        application = {
+            "application_id": str(uuid.uuid4()),
+            "status": "approved" if is_approved else "requires_review",
+            "approved_amount": loan_amount if is_approved else int(loan_amount * 0.8),
+            "interest_rate": base_rate,
+            "loan_term": loan_term_months,
+            "monthly_payment": monthly_payment,
+            "down_payment": down_payment,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        return application
+        
+    except Exception as e:
+        logger.error(f"Loan application error: {e}")
+        raise HTTPException(status_code=400, detail="Failed to process loan application")
+
+@api_router.post("/services/lease/apply")
+async def apply_for_lease(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Apply for car lease"""
+    try:
+        car_id = request.get("car_id")
+        lease_term_months = request.get("lease_term_months", 36)
+        mileage_limit = request.get("mileage_limit", 15000)
+        maintenance_included = request.get("maintenance_included", True)
+        
+        # Basic lease calculation
+        # Assume car price from car_id lookup or default
+        estimated_car_price = 2000000  # Default value
+        
+        # Lease factors
+        residual_value_factor = 0.6  # 60% residual value
+        money_factor = 0.002  # Lease rate factor
+        
+        # Calculate lease payment
+        depreciation = estimated_car_price * (1 - residual_value_factor)
+        monthly_depreciation = depreciation / lease_term_months
+        
+        residual_value = estimated_car_price * residual_value_factor
+        monthly_finance_charge = (estimated_car_price + residual_value) * money_factor
+        
+        base_monthly_payment = int(monthly_depreciation + monthly_finance_charge)
+        
+        # Add maintenance cost if included
+        maintenance_cost = 5000 if maintenance_included else 0
+        
+        # Down payment (typically 10-15% of car value)
+        down_payment = int(estimated_car_price * 0.12)
+        
+        application = {
+            "application_id": str(uuid.uuid4()),
+            "status": "pre_approved",
+            "lease_term": lease_term_months,
+            "monthly_payment": base_monthly_payment + maintenance_cost,
+            "down_payment": down_payment,
+            "mileage_limit": mileage_limit,
+            "maintenance_included": maintenance_included,
+            "residual_value": int(residual_value),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        return application
+        
+    except Exception as e:
+        logger.error(f"Lease application error: {e}")
+        raise HTTPException(status_code=400, detail="Failed to process lease application")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
