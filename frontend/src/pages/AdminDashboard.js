@@ -797,7 +797,7 @@ const AdminDashboard = () => {
                           <Button 
                             size="sm" 
                             variant="destructive"
-                            onClick={() => handleBlockUser(userData.id)}
+                            onClick={() => blockUser(userData.id)}
                           >
                             <Ban size={16} />
                           </Button>
