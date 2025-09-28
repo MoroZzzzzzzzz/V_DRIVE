@@ -54,6 +54,7 @@ function App() {
                 <Route path="/auctions" element={<AuctionPage />} />
                 <Route path="/compare" element={<ComparisonPage />} />
                 <Route path="/security" element={<SecuritySettingsPage />} />
+                <Route path="/services" element={<AdditionalServicesPage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
