@@ -44,10 +44,10 @@ const CRMPanel = () => {
   const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
-    if (user?.role === 'dealer') {
+    if (isDealer) {
       fetchCustomers();
     }
-  }, [user]);
+  }, [user, isDealer]);
 
   const fetchCustomers = async () => {
     try {
