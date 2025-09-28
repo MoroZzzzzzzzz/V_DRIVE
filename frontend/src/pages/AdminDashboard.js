@@ -257,11 +257,6 @@ const AdminDashboard = () => {
       setStats(mockStats);
       setUsers(mockUsers);
       setPendingItems(mockPendingItems);
-      setReports(mockReports);
-    } finally {
-      setLoading(false);
-    }
-  };
     } finally {
       setLoading(false);
     }
