@@ -19,6 +19,7 @@ import AuctionPage from './pages/AuctionPage';
 import ComparisonPage from './pages/ComparisonPage';
 import SecuritySettingsPage from './pages/SecuritySettingsPage';
 import AdditionalServicesPage from './pages/AdditionalServicesPage';
+import TelegramBotPage from './pages/TelegramBotPage';
 import AIAssistant from './components/AIAssistant';
 import PWAInstall from './components/PWAInstall';
 
