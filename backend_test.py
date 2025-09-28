@@ -3327,7 +3327,17 @@ class VelesDriveAPITester:
         buyer_result = await self.make_request("POST", "/auth/login", buyer_login)
         
         if buyer_result["status"] == 200:
-            buyer_headers = {"Authorization": f"Bearer {buyer_result['data']['access_token']}"}
+            # Handle different response structures
+            token = None
+            if "access_token" in buyer_result["data"]:
+                token = buyer_result["data"]["access_token"]
+            elif "token" in buyer_result["data"]:
+                token = buyer_result["data"]["token"]
+            else:
+                logger.error(f"❌ No access token found in buyer login response: {buyer_result['data']}")
+                return False
+            
+            buyer_headers = {"Authorization": f"Bearer {token}"}
             
             # Buyer should get HTTP 403 for admin endpoints
             admin_endpoints = [
