@@ -9,6 +9,9 @@ import CarsManagement from '../components/erp/CarsManagement';
 import SalesManagement from '../components/erp/SalesManagement';
 import ProjectsManagement from '../components/erp/ProjectsManagement';
 import ClientsManagement from '../components/erp/ClientsManagement';
+import ServiceManagement from '../components/erp/ServiceManagement';
+import PersonalizedOffers from '../components/erp/PersonalizedOffers';
+import PurchaseHistory from '../components/erp/PurchaseHistory';
 import AdvancedReports from '../components/erp/AdvancedReports';
 import CRMPanel from '../components/CRMPanel';
 
