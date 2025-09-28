@@ -188,6 +188,7 @@ const CatalogPage = () => {
       setLoading(true);
       const queryParams = new URLSearchParams();
       
+      if (filters.vehicleType) queryParams.append('vehicle_type', filters.vehicleType);
       if (filters.brand) queryParams.append('brand', filters.brand);
       if (filters.model) queryParams.append('model', filters.model);
       if (filters.minPrice) queryParams.append('min_price', filters.minPrice);
