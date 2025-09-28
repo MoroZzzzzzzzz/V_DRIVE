@@ -262,6 +262,60 @@ const AdminDashboard = () => {
     }
   };
 
+  const blockUser = async (userId) => {
+    try {
+      await axios.post(`${backendUrl}/api/admin/users/${userId}/block`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update local state
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, status: 'blocked' } : user
+      ));
+      
+      toast.success('Пользователь заблокирован');
+      await loadAdminData(); // Refresh data
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      toast.error('Ошибка блокировки пользователя');
+    }
+  };
+
+  const unblockUser = async (userId) => {
+    try {
+      await axios.post(`${backendUrl}/api/admin/users/${userId}/unblock`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update local state
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, status: 'active' } : user
+      ));
+      
+      toast.success('Пользователь разблокирован');
+      await loadAdminData(); // Refresh data
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      toast.error('Ошибка разблокировки пользователя');
+    }
+  };
+
+  const exportReport = async (reportType) => {
+    try {
+      const response = await axios.post(`${backendUrl}/api/admin/reports/${reportType}/export`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.download_url) {
+        window.open(response.data.download_url, '_blank');
+        toast.success('Отчет экспортирован');
+      }
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast.error('Ошибка экспорта отчета');
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="pt-20 min-h-screen bg-black flex items-center justify-center">
