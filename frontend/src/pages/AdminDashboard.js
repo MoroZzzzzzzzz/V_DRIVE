@@ -26,7 +26,12 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  DollarSign,
+  UserCheck,
+  UserX,
+  Clock,
+  Globe
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -132,6 +137,33 @@ const AdminDashboard = () => {
     }
   ];
 
+  const mockPendingItems = [
+    {
+      id: '1',
+      type: 'car',
+      title: 'Mercedes-Benz S-Class 2024',
+      submitter: 'Премиум Авто Москва',
+      submitted_at: '2024-01-16T10:30:00Z',
+      reason: 'Новое объявление'
+    },
+    {
+      id: '2', 
+      type: 'dealer',
+      title: 'Элит Моторс СПб',
+      submitter: 'elite@motors.ru',
+      submitted_at: '2024-01-16T09:15:00Z',
+      reason: 'Регистрация дилера'
+    },
+    {
+      id: '3',
+      type: 'review',
+      title: 'Отзыв на BMW X5',
+      submitter: 'user@example.com',
+      submitted_at: '2024-01-16T08:45:00Z',
+      reason: 'Жалоба на отзыв'
+    }
+  ];
+
   const mockReports = [
     {
       id: '1',
@@ -174,33 +206,6 @@ const AdminDashboard = () => {
     }
   ];
 
-  const mockPendingItems = [
-    {
-      id: '1',
-      type: 'car',
-      title: 'Mercedes-Benz S-Class 2024',
-      submitter: 'Премиум Авто Москва',
-      submitted_at: '2024-01-16T10:30:00Z',
-      reason: 'Новое объявление'
-    },
-    {
-      id: '2', 
-      type: 'dealer',
-      title: 'Элит Моторс СПб',
-      submitter: 'elite@motors.ru',
-      submitted_at: '2024-01-16T09:15:00Z',
-      reason: 'Регистрация дилера'
-    },
-    {
-      id: '3',
-      type: 'review',
-      title: 'Отзыв о BMW X5',
-      submitter: 'Иван Петров',
-      submitted_at: '2024-01-16T08:45:00Z',
-      reason: 'Жалоба на отзыв'
-    }
-  ];
-
   useEffect(() => {
     if (user?.role === 'admin') {
       loadAdminData();
@@ -230,11 +235,10 @@ const AdminDashboard = () => {
     return (
       <div className="pt-20 min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <i className="fas fa-shield-alt text-6xl text-red-600 mb-4"></i>
+          <Shield className="text-red-600 mx-auto mb-4" size={64} />
           <h2 className="text-2xl font-bold text-white mb-2">Доступ запрещен</h2>
           <p className="text-gray-400 mb-6">Панель администратора доступна только для админов</p>
-          <Button className="btn-gold" onClick={() => window.history.back()}>
-            <i className="fas fa-arrow-left mr-2"></i>
+          <Button className="bg-yellow-600 text-black hover:bg-yellow-700" onClick={() => window.history.back()}>
             Назад
           </Button>
         </div>
@@ -262,7 +266,6 @@ const AdminDashboard = () => {
 
   const handleApprove = async (itemId, type) => {
     try {
-      // Mock approval
       setPendingItems(prev => prev.filter(item => item.id !== itemId));
       toast.success(`${type === 'car' ? 'Автомобиль' : type === 'dealer' ? 'Дилер' : 'Отзыв'} одобрен`);
     } catch (error) {
@@ -272,7 +275,6 @@ const AdminDashboard = () => {
 
   const handleReject = async (itemId, type) => {
     try {
-      // Mock rejection
       setPendingItems(prev => prev.filter(item => item.id !== itemId));
       toast.success(`${type === 'car' ? 'Автомобиль' : type === 'dealer' ? 'Дилер' : 'Отзыв'} отклонен`);
     } catch (error) {
@@ -333,15 +335,6 @@ const AdminDashboard = () => {
     const matchesFilter = userFilter === 'all' || user.status === userFilter || user.role === userFilter;
     return matchesSearch && matchesFilter;
   });
-
-  const tabs = [
-    { id: 'overview', label: 'Обзор', icon: BarChart3 },
-    { id: 'users', label: 'Пользователи', icon: Users, count: users.filter(u => u.status === 'pending').length },
-    { id: 'moderation', label: 'Модерация', icon: Shield, count: pendingItems.length },
-    { id: 'analytics', label: 'Аналитика', icon: TrendingUp },
-    { id: 'reports', label: 'Отчеты', icon: Activity },
-    { id: 'settings', label: 'Настройки', icon: Settings }
-  ];
 
   const renderOverview = () => (
     <div className="space-y-8">
@@ -407,137 +400,558 @@ const AdminDashboard = () => {
               <div>
                 <p className="text-gray-400 text-sm">Месячный доход</p>
                 <p className="text-3xl font-bold text-white">{formatPrice(stats.monthly_revenue)}</p>
-              <p className="text-green-400 text-sm">
-                <i className="fas fa-arrow-up mr-1"></i>
-                +12% к прошлому месяцу
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
-              <i className="fas fa-ruble-sign text-white"></i>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="glass-card p-6">
-          <h3 className="text-xl font-bold text-white mb-6">Последние действия</h3>
-          <div className="space-y-4">
-            {[
-              { action: 'Новый дилер зарегистрирован', user: 'Элит Моторс', time: '5 мин назад', type: 'success' },
-              { action: 'Автомобиль добавлен в каталог', user: 'Премиум Авто', time: '12 мин назад', type: 'info' },
-              { action: 'Подписка активирована', user: 'Иван Петров', time: '25 мин назад', type: 'success' },
-              { action: 'Жалоба на отзыв', user: 'Анна Смирнова', time: '1 час назад', type: 'warning' }
-            ].map((activity, index) => (
-              <div key={index} className="flex items-center p-3 bg-gray-800/30 rounded-lg">
-                <div className={`w-2 h-2 rounded-full mr-3 ${
-                  activity.type === 'success' ? 'bg-green-400' :
-                  activity.type === 'warning' ? 'bg-yellow-400' : 'bg-blue-400'
-                }`}></div>
-                <div className="flex-1">
-                  <p className="text-white text-sm">{activity.action}</p>
-                  <p className="text-gray-400 text-xs">{activity.user} • {activity.time}</p>
-                </div>
+                <p className="text-green-400 text-sm flex items-center">
+                  <TrendingUp size={14} className="mr-1" />
+                  +12% к прошлому месяцу
+                </p>
               </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="glass-card p-6">
-          <h3 className="text-xl font-bold text-white mb-6">Быстрые действия</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <Button className="btn-outline-gold h-20 flex-col">
-              <i className="fas fa-plus text-2xl mb-2"></i>
-              <span>Добавить админа</span>
-            </Button>
-            <Button className="btn-outline-gold h-20 flex-col">
-              <i className="fas fa-ban text-2xl mb-2"></i>
-              <span>Заблокировать пользователя</span>
-            </Button>
-            <Button className="btn-outline-gold h-20 flex-col">
-              <i className="fas fa-bullhorn text-2xl mb-2"></i>
-              <span>Отправить уведомление</span>
-            </Button>
-            <Button className="btn-outline-gold h-20 flex-col">
-              <i className="fas fa-download text-2xl mb-2"></i>
-              <span>Экспорт данных</span>
-            </Button>
-          </div>
+              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-white" size={24} />
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
+
+      {/* System Health */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-white">Система</h3>
+              <Globe className="text-green-400" size={20} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Uptime</span>
+                <span className="text-green-400">{stats.server_uptime}%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Время отклика</span>
+                <span className="text-blue-400">{stats.avg_response_time}ms</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Активные сессии</span>
+                <span className="text-white">{stats.active_sessions}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-white">Безопасность</h3>
+              <Shield className="text-red-400" size={20} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Заблокированные</span>
+                <span className="text-red-400">{stats.blocked_users}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Жалобы</span>
+                <span className="text-yellow-400">{stats.reported_content}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Алерты</span>
+                <span className="text-red-400">{stats.system_alerts}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-white">Активность</h3>
+              <Activity className="text-blue-400" size={20} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Просмотры</span>
+                <span className="text-blue-400">{formatNumber(stats.total_views)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Конверсия</span>
+                <span className="text-green-400">{stats.conversion_rate}%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Premium юзеров</span>
+                <span className="text-yellow-400">{stats.premium_users}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card className="bg-gray-900 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Быстрые действия</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button 
+              onClick={() => setActiveTab('users')} 
+              className="bg-blue-600 text-white hover:bg-blue-700 h-20 flex-col gap-2"
+            >
+              <Users size={24} />
+              <span>Управление пользователями</span>
+            </Button>
+            <Button 
+              onClick={() => setActiveTab('moderation')} 
+              className="bg-yellow-600 text-black hover:bg-yellow-700 h-20 flex-col gap-2"
+            >
+              <Shield size={24} />
+              <span>Модерация</span>
+            </Button>
+            <Button 
+              onClick={() => setActiveTab('reports')} 
+              className="bg-green-600 text-white hover:bg-green-700 h-20 flex-col gap-2"
+            >
+              <BarChart3 size={24} />
+              <span>Отчеты</span>
+            </Button>
+            <Button 
+              onClick={() => setActiveTab('settings')} 
+              className="bg-gray-600 text-white hover:bg-gray-700 h-20 flex-col gap-2"
+            >
+              <Settings size={24} />
+              <span>Настройки</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderUsers = () => (
+    <div className="space-y-6">
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Input
+              placeholder="Поиск пользователей..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-gray-800 border-gray-600 text-white"
+            />
+          </div>
+        </div>
+        <Select value={userFilter} onValueChange={setUserFilter}>
+          <SelectTrigger className="w-full md:w-48 bg-gray-800 border-gray-600 text-white">
+            <SelectValue placeholder="Фильтр" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Все пользователи</SelectItem>
+            <SelectItem value="active">Активные</SelectItem>
+            <SelectItem value="blocked">Заблокированные</SelectItem>
+            <SelectItem value="pending">Ожидающие</SelectItem>
+            <SelectItem value="buyer">Покупатели</SelectItem>
+            <SelectItem value="dealer">Дилеры</SelectItem>
+            <SelectItem value="admin">Администраторы</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Users Table */}
+      <Card className="bg-gray-900 border-gray-700">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-800">
+                <tr>
+                  <th className="text-left p-4 text-gray-300 font-medium">Пользователь</th>
+                  <th className="text-left p-4 text-gray-300 font-medium">Роль</th>
+                  <th className="text-left p-4 text-gray-300 font-medium">Статус</th>
+                  <th className="text-left p-4 text-gray-300 font-medium">Последний вход</th>
+                  <th className="text-left p-4 text-gray-300 font-medium">2FA</th>
+                  <th className="text-right p-4 text-gray-300 font-medium">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((userData) => (
+                  <tr key={userData.id} className="border-t border-gray-700 hover:bg-gray-800/50">
+                    <td className="p-4">
+                      <div>
+                        <p className="text-white font-medium">{userData.full_name}</p>
+                        <p className="text-gray-400 text-sm">{userData.email}</p>
+                        {userData.company_name && (
+                          <p className="text-gray-500 text-xs">{userData.company_name}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <Badge 
+                        className={
+                          userData.role === 'admin' ? 'bg-red-600 text-white' :
+                          userData.role === 'dealer' ? 'bg-yellow-600 text-black' :
+                          'bg-blue-600 text-white'
+                        }
+                      >
+                        {userData.role === 'admin' ? 'Админ' : 
+                         userData.role === 'dealer' ? 'Дилер' : 'Покупатель'}
+                      </Badge>
+                    </td>
+                    <td className="p-4">
+                      <Badge 
+                        className={
+                          userData.status === 'active' ? 'bg-green-600 text-white' :
+                          userData.status === 'blocked' ? 'bg-red-600 text-white' :
+                          'bg-yellow-600 text-black'
+                        }
+                      >
+                        {userData.status === 'active' ? 'Активен' :
+                         userData.status === 'blocked' ? 'Заблокирован' : 'Ожидание'}
+                      </Badge>
+                      {userData.block_reason && (
+                        <p className="text-red-400 text-xs mt-1">{userData.block_reason}</p>
+                      )}
+                    </td>
+                    <td className="p-4 text-gray-300 text-sm">
+                      {formatDate(userData.last_login)}
+                    </td>
+                    <td className="p-4">
+                      {userData.two_fa_enabled ? (
+                        <CheckCircle className="text-green-400" size={18} />
+                      ) : (
+                        <XCircle className="text-red-400" size={18} />
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex justify-end gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-gray-400 hover:text-white"
+                              onClick={() => setSelectedUser(userData)}
+                            >
+                              <Eye size={16} />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="bg-gray-900 border-gray-700">
+                            <DialogHeader>
+                              <DialogTitle className="text-white">Детали пользователя</DialogTitle>
+                            </DialogHeader>
+                            {selectedUser && (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-gray-300">Имя</Label>
+                                    <p className="text-white">{selectedUser.full_name}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-gray-300">Email</Label>
+                                    <p className="text-white">{selectedUser.email}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-gray-300">Телефон</Label>
+                                    <p className="text-white">{selectedUser.phone}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-gray-300">Роль</Label>
+                                    <p className="text-white">{selectedUser.role}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-gray-300">Дата регистрации</Label>
+                                    <p className="text-white">{formatDate(selectedUser.created_at)}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-gray-300">Статус</Label>
+                                    <p className="text-white">{selectedUser.status}</p>
+                                  </div>
+                                </div>
+                                {selectedUser.role === 'buyer' && (
+                                  <div>
+                                    <Label className="text-gray-300">Покупки</Label>
+                                    <p className="text-white">{selectedUser.total_purchases || 0}</p>
+                                  </div>
+                                )}
+                                {selectedUser.role === 'dealer' && (
+                                  <div>
+                                    <Label className="text-gray-300">Продажи</Label>
+                                    <p className="text-white">{selectedUser.total_sales || 0}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        
+                        {userData.status === 'pending' && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleApproveUser(userData.id)}
+                            className="bg-green-600 text-white hover:bg-green-700"
+                          >
+                            <UserCheck size={16} />
+                          </Button>
+                        )}
+                        
+                        {userData.status === 'active' && userData.role !== 'admin' && (
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleBlockUser(userData.id)}
+                          >
+                            <Ban size={16} />
+                          </Button>
+                        )}
+                        
+                        {userData.status === 'blocked' && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleUnblockUser(userData.id)}
+                            className="bg-green-600 text-white hover:bg-green-700"
+                          >
+                            <UserX size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
   const renderModeration = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Ожидают модерации</h2>
-        <div className="flex gap-3">
-          <Button className="btn-outline-gold">
-            <i className="fas fa-filter mr-2"></i>
-            Фильтры
-          </Button>
-          <Button className="btn-gold">
-            <i className="fas fa-check-double mr-2"></i>
-            Одобрить все
-          </Button>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-white">Модерация контента</h2>
+        <Button onClick={loadAdminData} className="bg-gray-600 text-white hover:bg-gray-700">
+          <RefreshCw size={16} className="mr-2" />
+          Обновить
+        </Button>
       </div>
 
-      {pendingItems.length > 0 ? (
+      {pendingItems.length === 0 ? (
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="text-center py-16">
+            <CheckCircle className="text-green-400 mx-auto mb-4" size={64} />
+            <h3 className="text-xl font-bold text-white mb-2">Нет элементов для модерации</h3>
+            <p className="text-gray-400">Все элементы проверены</p>
+          </CardContent>
+        </Card>
+      ) : (
         <div className="space-y-4">
           {pendingItems.map((item) => (
-            <Card key={item.id} className="glass-card p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    item.type === 'car' ? 'bg-blue-600' :
-                    item.type === 'dealer' ? 'bg-gold' : 'bg-green-600'
-                  }`}>
-                    <i className={`fas ${
-                      item.type === 'car' ? 'fa-car' :
-                      item.type === 'dealer' ? 'fa-store' : 'fa-star'
-                    } text-white ${item.type === 'dealer' ? 'text-black' : ''}`}></i>
+            <Card key={item.id} className="bg-gray-900 border-gray-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge 
+                        className={
+                          item.type === 'car' ? 'bg-blue-600 text-white' :
+                          item.type === 'dealer' ? 'bg-yellow-600 text-black' :
+                          'bg-green-600 text-white'
+                        }
+                      >
+                        {item.type === 'car' ? 'Автомобиль' : 
+                         item.type === 'dealer' ? 'Дилер' : 'Отзыв'}
+                      </Badge>
+                      <h3 className="text-white font-medium">{item.title}</h3>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-1">От: {item.submitter}</p>
+                    <p className="text-gray-500 text-xs">
+                      {formatDate(item.submitted_at)} • {item.reason}
+                    </p>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-bold text-white">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.submitter} • {formatDate(item.submitted_at)}</p>
-                    <p className="text-gray-500 text-xs">{item.reason}</p>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm"
+                      onClick={() => handleApprove(item.id, item.type)}
+                      className="bg-green-600 text-white hover:bg-green-700"
+                    >
+                      <CheckCircle size={16} className="mr-1" />
+                      Одобрить
+                    </Button>
+                    <Button 
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleReject(item.id, item.type)}
+                    >
+                      <XCircle size={16} className="mr-1" />
+                      Отклонить
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex space-x-3">
-                  <Button
-                    size="sm"
-                    onClick={() => handleReject(item.id, item.type)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
-                    variant="ghost"
-                  >
-                    <i className="fas fa-times mr-1"></i>
-                    Отклонить
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleApprove(item.id, item.type)}
-                    className="btn-gold"
-                  >
-                    <i className="fas fa-check mr-1"></i>
-                    Одобрить
-                  </Button>
-                </div>
-              </div>
+              </CardContent>
             </Card>
           ))}
         </div>
-      ) : (
-        <Card className="glass-card p-12 text-center">
-          <i className="fas fa-check-circle text-6xl text-green-400 mb-4"></i>
-          <h3 className="text-2xl font-bold text-white mb-2">Все проверено!</h3>
-          <p className="text-gray-400">Нет элементов, ожидающих модерации</p>
-        </Card>
       )}
+    </div>
+  );
+
+  const renderReports = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-white">Отчеты системы</h2>
+        <Button onClick={() => exportReport('all')} className="bg-yellow-600 text-black hover:bg-yellow-700">
+          <Download size={16} className="mr-2" />
+          Экспорт всех отчетов
+        </Button>
+      </div>
+
+      <div className="grid gap-6">
+        {reports.map((report) => (
+          <Card key={report.id} className="bg-gray-900 border-gray-700">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Badge 
+                      className={
+                        report.status === 'completed' ? 'bg-green-600 text-white' :
+                        report.status === 'generating' ? 'bg-yellow-600 text-black' :
+                        'bg-gray-600 text-white'
+                      }
+                    >
+                      {report.status === 'completed' ? 'Готов' :
+                       report.status === 'generating' ? 'Генерируется' : 'Ожидание'}
+                    </Badge>
+                    <h3 className="text-white font-medium">{report.title}</h3>
+                  </div>
+                  <p className="text-gray-400 text-sm mb-2">{report.description}</p>
+                  <p className="text-gray-500 text-xs">
+                    Создан: {formatDate(report.created_at)}
+                  </p>
+                  {report.data && (
+                    <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {Object.entries(report.data).map(([key, value]) => (
+                        <div key={key} className="bg-gray-800 p-3 rounded">
+                          <p className="text-gray-400 text-xs capitalize">{key.replace('_', ' ')}</p>
+                          <p className="text-white font-medium">
+                            {typeof value === 'number' ? formatNumber(value) : 
+                             Array.isArray(value) ? value.join(', ') : value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 ml-4">
+                  {report.status === 'completed' && (
+                    <Button 
+                      size="sm"
+                      onClick={() => exportReport(report.type)}
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      <Download size={16} />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-white">Настройки системы</h2>
+      
+      <div className="grid gap-6">
+        <Card className="bg-gray-900 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white">Общие настройки</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-gray-300">Название платформы</Label>
+              <Input 
+                defaultValue="VELES DRIVE" 
+                className="bg-gray-800 border-gray-600 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-300">Email поддержки</Label>
+              <Input 
+                defaultValue="support@velesdrive.ru" 
+                className="bg-gray-800 border-gray-600 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-300">Максимальное количество изображений на автомобиль</Label>
+              <Input 
+                type="number"
+                defaultValue="10" 
+                className="bg-gray-800 border-gray-600 text-white"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-900 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white">Настройки безопасности</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">Требовать 2FA для дилеров</Label>
+                <p className="text-gray-500 text-sm">Обязательная двухфакторная аутентификация</p>
+              </div>
+              <input type="checkbox" defaultChecked className="rounded" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">Автоматическая модерация</Label>
+                <p className="text-gray-500 text-sm">AI-модерация объявлений</p>
+              </div>
+              <input type="checkbox" className="rounded" />
+            </div>
+            <div>
+              <Label className="text-gray-300">Максимальное количество попыток входа</Label>
+              <Input 
+                type="number"
+                defaultValue="5" 
+                className="bg-gray-800 border-gray-600 text-white"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-900 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white">Backup и восстановление</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">Автоматический backup</Label>
+                <p className="text-gray-500 text-sm">Ежедневное резервное копирование в 3:00 МСК</p>
+              </div>
+              <Button className="bg-green-600 text-white hover:bg-green-700">
+                Включено
+              </Button>
+            </div>
+            <div className="flex gap-4">
+              <Button className="bg-blue-600 text-white hover:bg-blue-700">
+                <Download size={16} className="mr-2" />
+                Создать backup
+              </Button>
+              <Button variant="outline" className="border-gray-600 text-gray-300">
+                <RefreshCw size={16} className="mr-2" />
+                Восстановить
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 
@@ -545,8 +959,8 @@ const AdminDashboard = () => {
     return (
       <div className="pt-20 min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="loading-spinner mx-auto mb-4"></div>
-          <p className="text-gray-400">Загрузка панели администратора...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto"></div>
+          <p className="text-gray-400 mt-4">Загрузка панели администратора...</p>
         </div>
       </div>
     );
@@ -554,67 +968,40 @@ const AdminDashboard = () => {
 
   return (
     <div className="pt-20 min-h-screen bg-black">
-      <div className="max-w-7xl mx-auto container-padding py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Панель администратора
-            <Badge className="bg-red-600 text-white ml-3">ADMIN</Badge>
-          </h1>
-          <p className="text-gray-400">
-            Добро пожаловать, {user.full_name} • Активные сессии: {stats.active_sessions}
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Панель администратора</h1>
+          <p className="text-gray-400">Управление платформой VELES DRIVE</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex overflow-x-auto mb-8 border-b border-gray-800">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? 'text-gold border-b-2 border-gold'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <i className={`${tab.icon} mr-2`}></i>
-              {tab.label}
-              {tab.count > 0 && (
-                <Badge className="bg-red-600 text-white ml-2 text-xs">
-                  {tab.count}
-                </Badge>
-              )}
-            </button>
-          ))}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6 bg-gray-800">
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="text-white data-[state=active]:bg-yellow-600 data-[state=active]:text-black flex items-center gap-2"
+              >
+                <tab.icon size={16} />
+                <span className="hidden sm:inline">{tab.label}</span>
+                {tab.count > 0 && (
+                  <Badge className="bg-red-600 text-white text-xs">
+                    {tab.count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        {/* Tab Content */}
-        <div>
-          {activeTab === 'overview' && renderOverview()}
-          {activeTab === 'moderation' && renderModeration()}
-          {activeTab === 'users' && (
-            <Card className="glass-card p-8 text-center">
-              <i className="fas fa-users text-6xl text-gray-600 mb-4"></i>
-              <h3 className="text-2xl font-bold text-white mb-2">Управление пользователями</h3>
-              <p className="text-gray-400">Раздел в разработке</p>
-            </Card>
-          )}
-          {activeTab === 'reports' && (
-            <Card className="glass-card p-8 text-center">
-              <i className="fas fa-chart-bar text-6xl text-gray-600 mb-4"></i>
-              <h3 className="text-2xl font-bold text-white mb-2">Отчеты и аналитика</h3>
-              <p className="text-gray-400">Раздел в разработке</p>
-            </Card>
-          )}
-          {activeTab === 'settings' && (
-            <Card className="glass-card p-8 text-center">
-              <i className="fas fa-cog text-6xl text-gray-600 mb-4"></i>
-              <h3 className="text-2xl font-bold text-white mb-2">Системные настройки</h3>
-              <p className="text-gray-400">Раздел в разработке</p>
-            </Card>
-          )}
-        </div>
+          <TabsContent value="overview">{renderOverview()}</TabsContent>
+          <TabsContent value="users">{renderUsers()}</TabsContent>
+          <TabsContent value="moderation">{renderModeration()}</TabsContent>
+          <TabsContent value="analytics">{renderOverview()}</TabsContent>
+          <TabsContent value="reports">{renderReports()}</TabsContent>
+          <TabsContent value="settings">{renderSettings()}</TabsContent>
+        </Tabs>
       </div>
     </div>
   );
