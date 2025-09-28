@@ -30,10 +30,11 @@ const CatalogPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Mock data for development
+  // Mock data for development with different vehicle types
   const mockCars = [
     {
       id: '1',
+      vehicle_type: 'car',
       brand: 'Mercedes-Benz',
       model: 'S-Class',
       year: 2024,
