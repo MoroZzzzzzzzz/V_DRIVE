@@ -1807,8 +1807,14 @@ class VelesDriveAPITester:
         headers = self.get_auth_headers("buyer")
         buyer_user = self.test_users["buyer"]
         
-        # Test disable with valid password and 2FA token
-        if "2fa_secret" in self.test_data:
+        # Check if 2FA is enabled first
+        user_info_result = await self.make_request("GET", "/auth/me", headers=headers)
+        user_2fa_enabled = False
+        if user_info_result["status"] == 200:
+            user_2fa_enabled = user_info_result["data"].get("two_fa_enabled", False)
+        
+        if user_2fa_enabled and "2fa_secret" in self.test_data:
+            # Test disable with valid password and 2FA token
             import pyotp
             secret = self.test_data["2fa_secret"]
             totp = pyotp.TOTP(secret)
@@ -1835,6 +1841,20 @@ class VelesDriveAPITester:
                     success = False
             else:
                 logger.error(f"❌ 2FA disable failed: {result}")
+                success = False
+        else:
+            logger.info("ℹ️  2FA not enabled, testing disable when not enabled")
+            # Test disable when 2FA is not enabled (should fail)
+            form_data = aiohttp.FormData()
+            form_data.add_field("password", buyer_user["password"])
+            form_data.add_field("token_or_backup", "123456")
+            
+            result = await self.make_request("POST", "/security/2fa/disable", files=form_data, headers=headers)
+            
+            if result["status"] == 400 and "not enabled" in result["data"].get("detail", ""):
+                logger.info("✅ Properly prevents disabling when 2FA not enabled")
+            else:
+                logger.error(f"❌ Should prevent disabling when 2FA not enabled: {result}")
                 success = False
         
         # Test disable with invalid password
