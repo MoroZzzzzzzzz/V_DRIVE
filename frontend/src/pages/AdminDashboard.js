@@ -413,7 +413,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleReject = async (itemId, type) => {
+  const handleRejectPending = async (itemId, type) => {
     try {
       setPendingItems(prev => prev.filter(item => item.id !== itemId));
       toast.success(`${type === 'car' ? 'Автомобиль' : type === 'dealer' ? 'Дилер' : 'Отзыв'} отклонен`);
