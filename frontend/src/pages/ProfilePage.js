@@ -323,14 +323,15 @@ const ProfilePage = () => {
         <div>
           <h3 className="text-lg font-semibold text-white mb-4">Безопасность</h3>
           <div className="space-y-3">
-            <Button className="btn-outline-gold">
-              <i className="fas fa-key mr-2"></i>
-              Сменить пароль
-            </Button>
-            <Button className="btn-outline-gold">
-              <i className="fas fa-shield-alt mr-2"></i>
-              Двухфакторная аутентификация
-            </Button>
+            <Link to="/security">
+              <Button className="btn-gold w-full">
+                <i className="fas fa-shield-alt mr-2"></i>
+                Настройки безопасности
+              </Button>
+            </Link>
+            <p className="text-gray-400 text-sm">
+              Управляйте двухфакторной аутентификацией, паролем и журналом активности
+            </p>
           </div>
         </div>
 
