@@ -16,6 +16,7 @@ const CatalogPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedForComparison, setSelectedForComparison] = useState([]);
   const [filters, setFilters] = useState({
+    vehicleType: 'car',
     brand: '',
     model: '',
     minPrice: '',
