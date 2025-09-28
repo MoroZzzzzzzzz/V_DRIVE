@@ -2703,11 +2703,7 @@ async def get_telegram_users(
         logger.error(f"Get Telegram users error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get Telegram users")
 
-# Include routers after all routes are defined
-app.include_router(api_router)
-app.include_router(payments_router)
-
-# CORS middleware
+# CORS middleware (must be added before routers)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -2715,6 +2711,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers after CORS middleware
+app.include_router(api_router)
+app.include_router(payments_router)
 
 # Configure logging
 logging.basicConfig(
