@@ -3006,61 +3006,122 @@ class VelesDriveAPITester:
         }
 
 async def main():
-    """Main test runner"""
+    """Main test runner focused on admin routing fix"""
+    logger.info("🚀 Starting VELES DRIVE Admin Routing Fix Testing...")
+    logger.info(f"Testing against: {BASE_URL}")
+    logger.info("🎯 Focus: Testing fixed admin endpoints after removing duplicate routes")
+    
     try:
         async with VelesDriveAPITester() as tester:
-            # Run specific user creation and authentication tests
-            logger.info("🚀 Starting Specific User Creation and Authentication Testing")
-            logger.info(f"Testing API at: {tester.base_url}")
-            
             # Test basic connectivity first
-            connectivity_ok = await tester.test_basic_connectivity()
-            if not connectivity_ok:
-                logger.error("❌ Basic connectivity failed. Cannot proceed with testing.")
+            if not await tester.test_basic_connectivity():
+                logger.error("❌ Basic connectivity failed. Exiting.")
                 sys.exit(1)
             
-            # Run specific authentication tests
-            auth_test_results = await tester.test_specific_user_creation_and_auth()
+            # Create specific admin test users as mentioned in review request
+            logger.info("\n🔧 Creating test users as specified in review request...")
+            logger.info("   - admin@test.com / testpass123 (for admin functions)")
+            logger.info("   - buyer@test.com / testpass123 (for testing access restrictions)")
+            logger.info("   - dealer@test.com / testpass123 (for testing access restrictions)")
             
-            # Print detailed results
-            logger.info(f"\n{'='*60}")
-            logger.info("AUTHENTICATION TEST RESULTS SUMMARY")
-            logger.info(f"{'='*60}")
+            if not await tester.create_specific_admin_test_users():
+                logger.error("❌ Failed to create specific admin test users. Exiting.")
+                sys.exit(1)
             
-            created_users = auth_test_results["created_users"]
-            auth_results = auth_test_results["auth_results"]
+            # Priority tests for admin routing fix
+            priority_tests = [
+                ("Admin Routing Fix - Core Test", tester.test_admin_routing_fix),
+            ]
             
-            # Print created users credentials
-            logger.info("\n📋 CREATED TEST USERS:")
-            for role, user_info in created_users.items():
-                user_data = user_info["user_data"]
-                logger.info(f"  {role.upper()}:")
-                logger.info(f"    Email: {user_data['email']}")
-                logger.info(f"    Password: {user_data['password']}")
-                logger.info(f"    Role: {user_data['role']}")
-                logger.info(f"    Full Name: {user_data['full_name']}")
+            # Additional supporting tests
+            supporting_tests = [
+                ("Authentication System", tester.test_authentication_system),
+                ("Basic Admin Panel", tester.test_admin_panel),
+            ]
             
-            # Print test results
-            logger.info(f"\n🔍 AUTHENTICATION TEST RESULTS:")
-            passed = 0
-            total = len(auth_results)
+            results = {}
             
-            for test_name, result in auth_results.items():
+            # Run priority tests first
+            logger.info(f"\n{'='*80}")
+            logger.info("🎯 PRIORITY TESTS - Admin Routing Fix")
+            logger.info(f"{'='*80}")
+            
+            for test_name, test_func in priority_tests:
+                logger.info(f"\n{'='*60}")
+                logger.info(f"🧪 Running: {test_name}")
+                logger.info(f"{'='*60}")
+                
+                try:
+                    result = await test_func()
+                    results[test_name] = result
+                    
+                    if result:
+                        logger.info(f"✅ {test_name}: PASSED")
+                    else:
+                        logger.error(f"❌ {test_name}: FAILED")
+                        
+                except Exception as e:
+                    logger.error(f"💥 {test_name}: ERROR - {str(e)}")
+                    results[test_name] = False
+            
+            # Run supporting tests
+            logger.info(f"\n{'='*80}")
+            logger.info("🔧 SUPPORTING TESTS")
+            logger.info(f"{'='*80}")
+            
+            for test_name, test_func in supporting_tests:
+                logger.info(f"\n{'='*60}")
+                logger.info(f"🧪 Running: {test_name}")
+                logger.info(f"{'='*60}")
+                
+                try:
+                    result = await test_func()
+                    results[test_name] = result
+                    
+                    if result:
+                        logger.info(f"✅ {test_name}: PASSED")
+                    else:
+                        logger.error(f"❌ {test_name}: FAILED")
+                        
+                except Exception as e:
+                    logger.error(f"💥 {test_name}: ERROR - {str(e)}")
+                    results[test_name] = False
+            
+            # Print summary
+            logger.info(f"\n{'='*80}")
+            logger.info("📊 ADMIN ROUTING FIX TEST RESULTS")
+            logger.info(f"{'='*80}")
+            
+            passed = sum(1 for result in results.values() if result)
+            total = len(results)
+            
+            # Separate priority and supporting results
+            priority_results = {k: v for k, v in results.items() if "Admin Routing Fix" in k}
+            supporting_results = {k: v for k, v in results.items() if "Admin Routing Fix" not in k}
+            
+            logger.info("🎯 PRIORITY TESTS:")
+            for test_name, result in priority_results.items():
                 status = "✅ PASSED" if result else "❌ FAILED"
-                logger.info(f"  {test_name:<35} {status}")
-                if result:
-                    passed += 1
+                logger.info(f"   {status}: {test_name}")
             
-            logger.info(f"\n📊 Overall Results: {passed}/{total} authentication tests passed")
+            logger.info("\n🔧 SUPPORTING TESTS:")
+            for test_name, result in supporting_results.items():
+                status = "✅ PASSED" if result else "❌ FAILED"
+                logger.info(f"   {status}: {test_name}")
             
-            if passed == total:
-                logger.info("🎉 All authentication tests passed! Users created successfully.")
+            logger.info(f"\n🎯 Overall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+            
+            # Focus on priority test results
+            priority_passed = sum(1 for result in priority_results.values() if result)
+            priority_total = len(priority_results)
+            
+            if priority_passed == priority_total:
+                logger.info("🎉 Admin routing fix tests PASSED! Duplicate routes issue resolved.")
+                sys.exit(0)
             else:
-                logger.warning(f"⚠️  {total - passed} authentication test(s) failed.")
-            
-            # Return appropriate exit code
-            sys.exit(0 if passed == total else 1)
-            
+                logger.error(f"❌ Admin routing fix tests FAILED! {priority_total-priority_passed} critical issue(s) remain.")
+                sys.exit(1)
+                
     except KeyboardInterrupt:
         logger.info("\n⏹️  Testing interrupted by user")
         sys.exit(1)
