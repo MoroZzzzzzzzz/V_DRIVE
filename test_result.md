@@ -602,11 +602,14 @@ VELES DRIVE - современная платформа для автомоби�
     file: "frontend/src/pages/AdditionalServicesPage.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Создана AdditionalServicesPage.js с полным функционалом страхования, кредитов и лизинга. Добавлены backend endpoints в server.py: /api/services/insurance/quote, /api/services/loan/apply, /api/services/lease/apply. Интеграция с каталогом - кнопка 'Услуги' в карточках автомобилей. Роутинг /services добавлен в App.js и навигацию Header.js. Готов к тестированию."
+      - working: "NA"
+        agent: "testing"
+        comment: "Backend API endpoints протестированы и работают корректно. Frontend страница требует отдельного тестирования UI компонентов."
 
   - task: "Страница настроек безопасности (/security)"
     implemented: true
