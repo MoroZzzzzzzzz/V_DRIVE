@@ -1430,9 +1430,7 @@ async def get_lease_applications(current_user: User = Depends(get_current_user))
     applications = await db.lease_applications.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
     return [LeaseApplication(**app) for app in applications]
 
-# Admin panel routes
-@api_router.get("/admin/stats")
-async def get_admin_stats(current_user: User = Depends(get_current_user)):
+# Old admin panel routes removed - replaced with enhanced versions below
     """Get platform statistics for admins"""
     
     if current_user.role != UserRole.ADMIN:
