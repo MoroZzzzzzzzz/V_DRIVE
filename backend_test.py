@@ -135,6 +135,70 @@ class VelesDriveAPITester:
             logger.error(f"❌ API connectivity test failed: {str(e)}")
             return False
     
+    async def create_specific_admin_test_users(self) -> bool:
+        """Create specific test users for admin testing as mentioned in review request"""
+        logger.info("👥 Creating specific admin test users...")
+        
+        success = True
+        
+        # Create the specific test users mentioned in the review request
+        specific_users = [
+            {
+                "email": "admin@test.com",
+                "password": "testpass123",
+                "full_name": "Admin User",
+                "phone": "+7-900-000-0001",
+                "role": "admin"
+            },
+            {
+                "email": "buyer@test.com",
+                "password": "testpass123",
+                "full_name": "Buyer User",
+                "phone": "+7-900-000-0002",
+                "role": "buyer"
+            },
+            {
+                "email": "dealer@test.com",
+                "password": "testpass123",
+                "full_name": "Dealer User",
+                "phone": "+7-900-000-0003",
+                "role": "dealer",
+                "company_name": "Test Dealer Company"
+            }
+        ]
+        
+        for user_data in specific_users:
+            # Try to register the user
+            logger.info(f"Creating {user_data['role']}: {user_data['email']}")
+            result = await self.make_request("POST", "/auth/register", user_data)
+            
+            if result["status"] == 200:
+                logger.info(f"✅ Created {user_data['role']}: {user_data['email']}")
+                self.test_users[f"specific_{user_data['role']}"] = user_data
+                self.auth_tokens[f"specific_{user_data['role']}"] = result["data"]["access_token"]
+            elif result["status"] == 400 and "already registered" in result["data"].get("detail", ""):
+                # User already exists, try to login
+                logger.info(f"User {user_data['email']} already exists, attempting login...")
+                login_data = {
+                    "email": user_data["email"],
+                    "password": user_data["password"]
+                }
+                
+                login_result = await self.make_request("POST", "/auth/login", login_data)
+                
+                if login_result["status"] == 200:
+                    logger.info(f"✅ Logged in existing {user_data['role']}: {user_data['email']}")
+                    self.test_users[f"specific_{user_data['role']}"] = user_data
+                    self.auth_tokens[f"specific_{user_data['role']}"] = login_result["data"]["access_token"]
+                else:
+                    logger.error(f"❌ Failed to login existing {user_data['role']}: {login_result}")
+                    success = False
+            else:
+                logger.error(f"❌ Failed to create {user_data['role']}: {result}")
+                success = False
+        
+        return success
+
     async def test_authentication_system(self) -> bool:
         """Test user registration and login"""
         logger.info("🔐 Testing Authentication System...")
