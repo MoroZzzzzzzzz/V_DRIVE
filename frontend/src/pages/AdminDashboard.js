@@ -316,6 +316,46 @@ const AdminDashboard = () => {
     }
   };
 
+  // Moderation functions
+  const handleApprove = async (itemId, itemType) => {
+    try {
+      // For now, we'll use a generic moderation endpoint
+      await axios.post(`${backendUrl}/api/admin/moderation/approve`, {
+        item_id: itemId,
+        item_type: itemType
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Remove from pending items
+      setPendingItems(prev => prev.filter(item => item.id !== itemId));
+      toast.success(`${itemType === 'car' ? 'Автомобиль' : itemType === 'dealer' ? 'Дилер' : 'Отзыв'} одобрен`);
+      
+    } catch (error) {
+      console.error('Error approving item:', error);
+      toast.error('Ошибка одобрения элемента');
+    }
+  };
+
+  const handleReject = async (itemId, itemType) => {
+    try {
+      await axios.post(`${backendUrl}/api/admin/moderation/reject`, {
+        item_id: itemId,
+        item_type: itemType
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Remove from pending items  
+      setPendingItems(prev => prev.filter(item => item.id !== itemId));
+      toast.success(`${itemType === 'car' ? 'Автомобиль' : itemType === 'dealer' ? 'Дилер' : 'Отзыв'} отклонен`);
+      
+    } catch (error) {
+      console.error('Error rejecting item:', error);
+      toast.error('Ошибка отклонения элемента');
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="pt-20 min-h-screen bg-black flex items-center justify-center">
