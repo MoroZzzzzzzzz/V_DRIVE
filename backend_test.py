@@ -4311,13 +4311,16 @@ if __name__ == "__main__":
             asyncio.run(main_admin_dashboard_tests())
         elif sys.argv[1] == "erp":
             asyncio.run(main_erp_tests())
+        elif sys.argv[1] == "review":
+            asyncio.run(main_review_request_tests())
         else:
-            logger.info("Usage: python backend_test.py [ai|2fa|admin|erp]")
-            logger.info("  ai    - Run AI function tests only")
-            logger.info("  2fa   - Run 2FA system tests only")
-            logger.info("  admin - Run Admin Dashboard tests only")
-            logger.info("  erp   - Run comprehensive ERP system tests only")
+            logger.info("Usage: python backend_test.py [ai|2fa|admin|erp|review]")
+            logger.info("  ai     - Run AI function tests only")
+            logger.info("  2fa    - Run 2FA system tests only")
+            logger.info("  admin  - Run Admin Dashboard tests only")
+            logger.info("  erp    - Run comprehensive ERP system tests only")
+            logger.info("  review - Run tests for specific review request endpoints")
             logger.info("  (no args) - Run authentication tests")
             sys.exit(1)
     else:
-        asyncio.run(main())
+        asyncio.run(main_review_request_tests())
