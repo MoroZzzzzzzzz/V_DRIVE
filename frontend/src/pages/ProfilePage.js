@@ -329,8 +329,14 @@ const ProfilePage = () => {
                 Настройки безопасности
               </Button>
             </Link>
+            <Link to="/telegram">
+              <Button className="btn-outline-gold w-full">
+                <i className="fab fa-telegram mr-2"></i>
+                Telegram Bot
+              </Button>
+            </Link>
             <p className="text-gray-400 text-sm">
-              Управляйте двухфакторной аутентификацией, паролем и журналом активности
+              2FA, пароль, Telegram интеграция и журнал активности
             </p>
           </div>
         </div>
