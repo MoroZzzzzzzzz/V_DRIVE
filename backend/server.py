@@ -2399,6 +2399,95 @@ async def export_report(
         logger.error(f"Export report error: {e}")
         raise HTTPException(status_code=500, detail="Failed to export report")
 
+# Admin Moderation Endpoints
+@api_router.post("/admin/moderation/approve")
+async def approve_moderation_item(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Approve pending moderation item"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can approve items")
+    
+    try:
+        item_id = request.get("item_id")
+        item_type = request.get("item_type")  # car, dealer, review
+        
+        if not item_id or not item_type:
+            raise HTTPException(status_code=400, detail="item_id and item_type are required")
+        
+        # Update the item status based on type
+        if item_type == "car":
+            result = await db.cars.update_one(
+                {"id": item_id},
+                {"$set": {"status": "approved", "approved_at": datetime.now(timezone.utc)}}
+            )
+        elif item_type == "dealer":
+            result = await db.users.update_one(
+                {"id": item_id, "role": "dealer"},
+                {"$set": {"status": "active", "approved_at": datetime.now(timezone.utc)}}
+            )
+        elif item_type == "review":
+            result = await db.reviews.update_one(
+                {"id": item_id},
+                {"$set": {"status": "approved", "approved_at": datetime.now(timezone.utc)}}
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid item_type")
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Item not found")
+        
+        return {"message": f"{item_type.capitalize()} approved successfully"}
+        
+    except Exception as e:
+        logger.error(f"Approve moderation item error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to approve item")
+
+@api_router.post("/admin/moderation/reject")
+async def reject_moderation_item(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Reject pending moderation item"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can reject items")
+    
+    try:
+        item_id = request.get("item_id")
+        item_type = request.get("item_type")  # car, dealer, review
+        
+        if not item_id or not item_type:
+            raise HTTPException(status_code=400, detail="item_id and item_type are required")
+        
+        # Update the item status based on type
+        if item_type == "car":
+            result = await db.cars.update_one(
+                {"id": item_id},
+                {"$set": {"status": "rejected", "rejected_at": datetime.now(timezone.utc)}}
+            )
+        elif item_type == "dealer":
+            result = await db.users.update_one(
+                {"id": item_id, "role": "dealer"},
+                {"$set": {"status": "rejected", "rejected_at": datetime.now(timezone.utc)}}
+            )
+        elif item_type == "review":
+            result = await db.reviews.update_one(
+                {"id": item_id},
+                {"$set": {"status": "rejected", "rejected_at": datetime.now(timezone.utc)}}
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid item_type")
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Item not found")
+        
+        return {"message": f"{item_type.capitalize()} rejected successfully"}
+        
+    except Exception as e:
+        logger.error(f"Reject moderation item error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reject item")
+
 # Telegram Bot Integration Endpoints
 @api_router.post("/telegram/connect")
 async def connect_telegram_account(
